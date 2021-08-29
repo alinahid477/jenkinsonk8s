@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: harbor-allow-insecure-registries
+  namespace: jenkins
+data:
+  daemon.json: |
+    { "insecure-registries":["SELFSIGNED_CERT_REGISTRY_URL"] }
