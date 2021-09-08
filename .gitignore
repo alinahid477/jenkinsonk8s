@@ -33,6 +33,8 @@ dist/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+.tanzu
+.azure
 
 ### VS Code ###
 .vscode/
@@ -52,4 +54,5 @@ binaries/*
 !.kube/.gitkeep 
 .ssh/*
 !.ssh/.gitkeep 
+
 

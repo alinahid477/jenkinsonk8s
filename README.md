@@ -1,6 +1,6 @@
 # Jenkins on k8s quick install (bootstrapped docker)
 
-<img src="images/logo.png" alt="Jenkins on K8s" width=200 height=200/>
+<img src="images/logo.png" alt="Jenkins on K8s" width=200 height=200/> 
 
 
 For details step by step deployment follow [DETAILS.md](DETAILS.md)
