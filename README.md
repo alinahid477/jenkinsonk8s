@@ -16,23 +16,36 @@ This is a bootstrapped docker that will
 - After the install bash script will mark it as complete and expose access to shell. 
 
 
-## input through .env
+## Prepare
 
-mv ~/.env.sample ~/.env
+### Local environment
+Local machine with docker-ce or docker-ee installed on it.
+
+### .ENV
+
+`mv .env.sample .env`
+
+***If you are using your own kubeconfig file please place the kubeconfig file in .kube/config (`cp /path/to/myown_kubeconfig_file .kube/config`) and ignore the TKG inputs below.***
 
 - BASTION_HOST={ip of bastion/jump host. Leave blank if you have direct connection}
 - BASTION_USERNAME={if the above is present then the username for the above}
-- TKG_SUPERVISOR_ENDPOINT={find the supervisor endpoint from vsphere (eg: Menu>Workload management>clusters>Control Plane Node IP Address)}
-- TKG_VSPHERE_CLUSTER_NAME={the k8s cluster your are trying to access}
-- TKG_VSPHERE_CLUSTER_ENDPOINT={endpoint ip or hostname of the above cluster. Grab it from your vsphere environment. (Menu>Workload Management>Namespaces>Select the namespace where the k8s cluster resides>Compute>VMware Resources>Tanzu Kubernetes Clusters>Control Plane Address[grab the ip of the desired k8s])}
-- TKG_VSPHERE_CLUSTER_USERNAME={username for accessing the cluster}
-- TKG_VSPHERE_CLUSTER_PASSWORD={password for accessing the cluster}
+- TKG_VSPHERE_SUPERVISOR_ENDPOINT={find the supervisor endpoint from vsphere (eg: Menu>Workload management>clusters>Control Plane Node IP Address). *Leave empty if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_CLUSTER_NAME={the k8s cluster your are trying to access. *Leave empty if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_CLUSTER_ENDPOINT={endpoint ip or hostname of the above cluster. Grab it from your vsphere environment. (Menu>Workload Management>Namespaces>Select the namespace where the k8s cluster resides>Compute>VMware Resources>Tanzu Kubernetes Clusters>Control Plane Address[grab the ip of the desired k8s]). *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_CLUSTER_USERNAME={username for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_CLUSTER_PASSWORD={password for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
 - DOCKERHUB_USERNAME={dockerhub username -- needed to avoid the dockerhub rate limiting issue}
 - DOCKERHUB_PASSWORD={dockerhub password -- needed to avoid the dockerhub rate limiting issue}
 - DOCKERHUB_EMAIL=
-- SELFSIGNED_CERT_REGISTRY_URL={pvt registry domain. If you have private registry where jenkins will be pushing docker images to and the registry is using a self-signed cert then you must tell jekins that.}
+- SELFSIGNED_CERT_REGISTRY_URL={pvt registry domain. If you have private registry where jenkins will be pushing docker images to and the registry is using a self-signed cert then you must tell jekins that. *Leave empty or ignore if your private container registry does not uses self signed certificate.*}
+- JENKINS_PVC_STORAGE_CLASS_NAME={Storage class attached to the k8s cluster. Run `kubectl get storageclass` to get a list of storage classes.}
+- TMC_API_TOKEN={*Optional. Only needed if you are using TMC supplied kubeconfig file (and leaving the TKG params empty.)*}
 
 
+### Binaries
+
+**Place required binaries in the binaries directory**
+- **tmc** (optional) --> required only when you are using tmc supplied kubeconfig
 
 ## Docker build and run
 

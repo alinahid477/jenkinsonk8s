@@ -2,10 +2,10 @@ apiVersion: run.tanzu.vmware.com/v1alpha1 #TKG API endpoint
 kind: TanzuKubernetesCluster #required parameter 
 metadata: 
   name: jenkins-cluster #cluster name, user defined 
-  namespace: calc #supervisor namespace 
+  namespace: productivity-tools #supervisor namespace 
 spec: 
   distribution: 
-    version: v1.18 #resolved kubernetes version 
+    version: 1.20.2 #resolved kubernetes version 
   topology: 
     controlPlane: 
       count: 1 #number of control plane nodes 
@@ -14,4 +14,4 @@ spec:
     workers: 
       count: 1 #number of worker nodes 
       class: best-effort-small #vmclass for worker nodes 
-      storageClass: pacific-gold-storage-policy #storageclass for worker nodes
+      storageClass: k8s-policy #storageclass for worker nodes

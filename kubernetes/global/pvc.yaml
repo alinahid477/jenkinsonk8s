@@ -4,7 +4,7 @@ metadata:
   name: jenkins-pvc1
   namespace: jenkins
 spec:
- storageClassName: k8s-policy
+ storageClassName: JENKINS_PVC_STORAGE_CLASS_NAME
  accessModes:
    - ReadWriteOnce
  resources:

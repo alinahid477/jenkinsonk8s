@@ -49,6 +49,7 @@ mvnw.cmd
 .vmware-cna-saas
 binaries/*
 !binaries/.gitkeep 
+!binaries/init.sh
 !binaries/jenkinsinstall.sh
 .kube/*
 !.kube/.gitkeep 

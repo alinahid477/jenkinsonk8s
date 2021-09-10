@@ -1,61 +1,27 @@
 #!/bin/bash
-export $(cat /root/.env | xargs)
-export KUBECTL_VSPHERE_PASSWORD=$(echo $TKG_VSPHERE_CLUSTER_PASSWORD | xargs)
-printf "\n\n\n***********Starting installation of Jenkins...*************\n"
-
-printf "\n\n\n**********vSphere Cluster login...*************\n"
-
-
-printf "\n\n\n***********Checking kubeconfig...*************\n"
-
-EXISTING_JWT_EXP=$(awk '/users/{flag=1} flag && /'$TKG_VSPHERE_CLUSTER_ENDPOINT'/{flag2=1} flag2 && /token:/ {print $NF;exit}' /root/.kube/config | jq -R 'split(".") | .[1] | @base64d | fromjson | .exp')
-
-if [ -z "$EXISTING_JWT_EXP" ]
-then
-    EXISTING_JWT_EXP=$(date  --date="yesterday" +%s)
-    # printf "\n SET EXP DATE $EXISTING_JWT_EXP"
-fi
-CURRENT_DATE=$(date +%s)
-
-if [ "$CURRENT_DATE" -gt "$EXISTING_JWT_EXP" ]
-then
-    printf "\n\n\n***********Login into cluster...*************\n"
-    if [ -z "$BASTION_HOST" ]
-    then
-        rm /root/.kube/config
-        rm -R /root/.kube/cache
-        kubectl vsphere login --tanzu-kubernetes-cluster-name $TKG_VSPHERE_CLUSTER_NAME --server kubernetes --insecure-skip-tls-verify -u $TKG_VSPHERE_CLUSTER_USERNAME
-        kubectl config use-context $TKG_VSPHERE_CLUSTER_NAME
-    else
-        printf "\n\n\n***********Creating Tunnel through bastion $BASTION_USERNAME@$BASTION_HOST ...*************\n"
-        ssh-keyscan $BASTION_HOST > /root/.ssh/known_hosts
-        ssh -i /root/.ssh/id_rsa -4 -fNT -L 443:$TKG_SUPERVISOR_ENDPOINT:443 $BASTION_USERNAME@$BASTION_HOST
-        ssh -i /root/.ssh/id_rsa -4 -fNT -L 6443:$TKG_VSPHERE_CLUSTER_ENDPOINT:6443 $BASTION_USERNAME@$BASTION_HOST
-
-        
-        rm /root/.kube/config
-        rm -R /root/.kube/cache
-        kubectl vsphere login --tanzu-kubernetes-cluster-name $TKG_VSPHERE_CLUSTER_NAME --server kubernetes --insecure-skip-tls-verify -u $TKG_VSPHERE_CLUSTER_USERNAME
-        sed -i 's/kubernetes/'$TKG_SUPERVISOR_ENDPOINT'/g' ~/.kube/config
-        kubectl config use-context $TKG_VSPHERE_CLUSTER_NAME
-        sed -i '0,/'$TKG_VSPHERE_CLUSTER_ENDPOINT'/s//kubernetes/' ~/.kube/config
-
-        printf "\n\n\n***********Jenkins will be installed in the below cluster...*************\n"
-        kubectl get ns
-    fi
-else
-    printf "\n\n\nCuurent kubeconfig has not expired. Using the existing one found at .kube/config\n"
-    if [ -n "$BASTION_HOST" ]
-    then
-        printf "\n\n\n***********Creating K8s endpoint Tunnel through bastion $BASTION_USERNAME@$BASTION_HOST ...*************\n"
-        ssh -i /root/.ssh/id_rsa -4 -fNT -L 6443:$TKG_VSPHERE_CLUSTER_ENDPOINT:6443 $BASTION_USERNAME@$BASTION_HOST
-    fi
-    printf "\n\n\n***********This docker is now connected to the below cluster...*************\n"
-    kubectl get ns
-fi
 
 if [ -z "$COMPLETE" ]
 then
+    if [[ -z $SILENTMODE ]]
+    then
+        printf "\n\n\n***********The cluster has below storage policies...*************\n"
+        kubectl get storageclass
+        printf "\nPlease confirm that you have added value from the above as the value for JENKINS_PVC_STORAGE_CLASS_NAME in the .env file."
+        printf "\nIf not, now is the time to do so."
+        printf "\nOnce you have added the right value in the .env file confirm y to continue.\n"
+        while true; do
+            read -p "Confirm to continue? [y/n] " yn
+            case $yn in
+                [Yy]* ) printf "\nyou confirmed yes\n"; break;;
+                [Nn]* ) printf "\n\nYou said no. \n\nExiting...\n\n"; exit;;
+                * ) echo "Please answer yes or no.";;
+            esac
+        done
+    fi
+    export $(cat /root/.env | xargs)
+
+    printf "\n\n\n***********Starting installation of Jenkins...*************\n"
+
     printf "\n\n\n***********Prepare cluster for Jenkins...*************\n"
     printf "\n"
 
@@ -68,7 +34,8 @@ then
     printf "\nDone."
 
     printf "\nCreate PVC for Jenkins:"
-    kubectl apply -f ~/kubernetes/global/pvc.yaml
+    awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
+    kubectl apply -f ~/tmp/pvc.yaml
     printf "\nDone."
 
     printf "\nCreate Dockerhub secret in kubernetes namespace for Jenkins:"
@@ -88,10 +55,14 @@ then
     kubectl get secret -n jenkins
     printf "\nDone."
 
-    printf "\nIntegration to Harbor private registry:"
-    awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$SELFSIGNED_CERT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
-    kubectl apply -f /tmp/allow-insecure-registries.yaml
-    printf "\nDone."
+    if [[ -n  $SELFSIGNED_CERT_REGISTRY_URL ]]
+    then
+        printf "\nIntegration to Harbor private registry:"
+        awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$SELFSIGNED_CERT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
+        kubectl apply -f /tmp/allow-insecure-registries.yaml
+        printf "\nDone."
+    fi
+    
 
     printf "\nDeploy Jenkins:"
     kubectl apply -f ~/kubernetes/jenkins/deployment.yaml
