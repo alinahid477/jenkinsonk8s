@@ -41,6 +41,15 @@ Local machine with docker-ce or docker-ee installed on it.
 - JENKINS_PVC_STORAGE_CLASS_NAME={Storage class attached to the k8s cluster. Run `kubectl get storageclass` to get a list of storage classes.}
 - TMC_API_TOKEN={*Optional. Only needed if you are using TMC supplied kubeconfig file (and leaving the TKG params empty.)*}
 
+***The below fields are optional. You can leave the below empty (or delete it). The wizard will fill it. (The below values are needed only in pipeline scenario)***
+- JENKINS_USERNAME=
+- JENKINS_PASSWORD=
+- JENKINS_SECRET_PVT_REPO_USERNAME=
+- JENKINS_SECRET_PVT_REPO_PASSWORD=
+- JENKINS_SECRET_PVT_REGISTRY_USERNAME=
+- JENKINS_SECRET_PVT_REGISTRY_PASSWORD=
+- JENKINS_SECRET_DOCKERHUB_USERNAME=
+- JENKINS_SECRET_DOCKERHUB_PASSWORD=
 
 ### Binaries
 

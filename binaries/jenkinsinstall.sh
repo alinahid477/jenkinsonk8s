@@ -228,7 +228,7 @@ then
     printf "*Jenkins deployment complete.*\n"
 
     unset confirmed
-    if [[ -z $SILENTMODE || $SILENTMODE == 'n']]
+    if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
     then
         while true; do
             read -p "Confirm to config jenkins configs for k8s [y/n] " yn

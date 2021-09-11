@@ -181,89 +181,102 @@ printf "Done\n"
 # printf "\nsleep\n"
 # sleep 10
 
-awk -v old="JENKINS_ENDPOINT" -v new="$JENKINS_ENDPOINT" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml > /tmp/jenkins-config-as-code-plugin.configmap.yaml
-kubectl apply -f /tmp/jenkins-config-as-code-plugin.configmap.yaml
+if [[ -z $JENKINS_CONFIG_AS_CODE_CONFIGMAP || $JENKINS_CONFIG_AS_CODE_CONFIGMAP == 'n' ]]
+then
+    awk -v old="JENKINS_ENDPOINT" -v new="$JENKINS_ENDPOINT" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml > /tmp/jenkins-config-as-code-plugin.configmap.yaml
+    kubectl apply -f /tmp/jenkins-config-as-code-plugin.configmap.yaml
+    printf "\nJENKINS_CONFIG_AS_CODE_CONFIGMAP=y" >> /root/.env
+fi
 
 
+if [[ -z $JENKINS_PLUGINS_INSTALLED || $JENKINS_PLUGINS_INSTALLED == 'n' ]]
+then
+    printf "\ninstalling pugins...\n"
+    # printf "java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-utility-steps kubernetes kubernetes-cli credentials-binding"
 
-printf "\ninstalling pugins\n"
-# printf "java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-utility-steps kubernetes kubernetes-cli credentials-binding"
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin credentials
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin credentials-binding
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin cloudbees-folder
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin git
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin workflow-aggregator
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin ssh-slaves
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-stage-view
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-github-lib
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin ws-cleanup
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin build-timeout
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin timestamper
+    sleep 10
 
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin credentials
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin credentials-binding
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin cloudbees-folder
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin git
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin workflow-aggregator
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin ssh-slaves
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-stage-view
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-github-lib
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin ws-cleanup
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin build-timeout
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin timestamper
-sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-utility-steps 
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin kubernetes 
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin kubernetes-cli 
+    sleep 10
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin configuration-as-code
+    sleep 10
 
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin pipeline-utility-steps 
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin kubernetes 
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin kubernetes-cli 
-sleep 10
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD install-plugin configuration-as-code
-sleep 10
-
-printf "Done.\n"
-
-
-printf "\nwait 10m\n"
-sleep 10m
-printf "Done.\n"
-
-printf "\nSafe restart and wait 5min\n"
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD safe-restart
-sleep 5m
-printf "Done.\n"
-
-printf "\ncreating credential for pvt-repo..\n"
-cp ~/binaries/credential.template ~/kubernetes/jenkins/pvt-repo.credential.xml
-sed -i 's/CREDENTIAL_ID/pvt-repo-cred/g' ~/kubernetes/jenkins/pvt-repo.credential.xml
-sed -i 's/CREDENTIAL_DESCRIPTION/pvt-repo-cred/g' ~/kubernetes/jenkins/pvt-repo.credential.xml
-awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REPO_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/pvt-repo.credential.xml > /tmp/pvt-repo.credential.xml
-awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REPO_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/pvt-repo.credential.xml > ~/kubernetes/jenkins/pvt-repo.credential.xml
-
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/pvt-repo.credential.xml
-sleep 2
-printf "Done.\n"
+    printf "Done.\n"
 
 
-printf "\ncreating credential file for pvt-registry..\n"
-cp ~/binaries/credential.template ~/kubernetes/jenkins/pvt-registry.credential.xml
-sed -i 's/CREDENTIAL_ID/pvt-registry-cred/g' ~/kubernetes/jenkins/pvt-registry.credential.xml
-sed -i 's/CREDENTIAL_DESCRIPTION/pvt-registry-cred/g' ~/kubernetes/jenkins/pvt-registry.credential.xml
-awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REGISTRY_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/pvt-registry.credential.xml > /tmp/pvt-registry.credential.xml
-awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REGISTRY_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/pvt-registry.credential.xml > ~/kubernetes/jenkins/pvt-registry.credential.xml
+    printf "\nwait 10m\n"
+    sleep 10m
+    printf "Done.\n"
 
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/pvt-registry.credential.xml
-sleep 2
-printf "Done.\n"
+    printf "\nSafe restart and wait 5min\n"
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD safe-restart
+    sleep 5m
+    printf "Done.\n"
+
+    printf "\nJENKINS_PLUGINS_INSTALLED=y" >> /root/.env
+fi
+
+if [[ -z $JENKINS_SECRETS_APPLIED || $JENKINS_SECRETS_APPLIED == 'n' ]]
+then
+    printf "\ncreating credential for pvt-repo..\n"
+    cp ~/binaries/credential.template ~/kubernetes/jenkins/pvt-repo.credential.xml
+    sed -i 's/CREDENTIAL_ID/pvt-repo-cred/g' ~/kubernetes/jenkins/pvt-repo.credential.xml
+    sed -i 's/CREDENTIAL_DESCRIPTION/pvt-repo-cred/g' ~/kubernetes/jenkins/pvt-repo.credential.xml
+    awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REPO_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/pvt-repo.credential.xml > /tmp/pvt-repo.credential.xml
+    awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REPO_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/pvt-repo.credential.xml > ~/kubernetes/jenkins/pvt-repo.credential.xml
+
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/pvt-repo.credential.xml
+    sleep 2
+    printf "Done.\n"
 
 
-printf "\ncreating credential file for dockerhub..\n"
-cp ~/binaries/credential.template ~/kubernetes/jenkins/dockerhub.credential.xml
-sed -i 's/CREDENTIAL_ID/dockerhub-cred/g' ~/kubernetes/jenkins/dockerhub.credential.xml
-sed -i 's/CREDENTIAL_DESCRIPTION/dockerhub-cred/g' ~/kubernetes/jenkins/dockerhub.credential.xml
-awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REGISTRY_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/dockerhub.credential.xml > /tmp/dockerhub.credential.xml
-awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REGISTRY_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/dockerhub.credential.xml > ~/kubernetes/jenkins/dockerhub.credential.xml
+    printf "\ncreating credential file for pvt-registry..\n"
+    cp ~/binaries/credential.template ~/kubernetes/jenkins/pvt-registry.credential.xml
+    sed -i 's/CREDENTIAL_ID/pvt-registry-cred/g' ~/kubernetes/jenkins/pvt-registry.credential.xml
+    sed -i 's/CREDENTIAL_DESCRIPTION/pvt-registry-cred/g' ~/kubernetes/jenkins/pvt-registry.credential.xml
+    awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REGISTRY_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/pvt-registry.credential.xml > /tmp/pvt-registry.credential.xml
+    awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REGISTRY_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/pvt-registry.credential.xml > ~/kubernetes/jenkins/pvt-registry.credential.xml
 
-java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/dockerhub.credential.xml
-sleep 2
-printf "Done.\n"
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/pvt-registry.credential.xml
+    sleep 2
+    printf "Done.\n"
+
+
+    printf "\ncreating credential file for dockerhub..\n"
+    cp ~/binaries/credential.template ~/kubernetes/jenkins/dockerhub.credential.xml
+    sed -i 's/CREDENTIAL_ID/dockerhub-cred/g' ~/kubernetes/jenkins/dockerhub.credential.xml
+    sed -i 's/CREDENTIAL_DESCRIPTION/dockerhub-cred/g' ~/kubernetes/jenkins/dockerhub.credential.xml
+    awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REGISTRY_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/dockerhub.credential.xml > /tmp/dockerhub.credential.xml
+    awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REGISTRY_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/dockerhub.credential.xml > ~/kubernetes/jenkins/dockerhub.credential.xml
+
+    java -jar /usr/local/bin/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/dockerhub.credential.xml
+    sleep 2
+    printf "Done.\n"
+
+    printf "\nJENKINS_SECRETS_APPLIED=y" >> /root/.env
+fi

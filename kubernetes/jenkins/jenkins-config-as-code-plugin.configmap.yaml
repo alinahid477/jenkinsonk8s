@@ -32,17 +32,3 @@ data:
           - credentials:
               - fileSystemServiceAccountCredential:
                   id: "jenkinsk8s-cred"
-    jobs:
-      - script: >
-        pipelineJob('configuration-as-code') {
-            definition {
-                cps {
-                    sandbox()
-                    script("""
-                      node('linux-x86_64') {
-                          sh "hostname"
-                      }
-                    """.stripIndent())
-                }
-            }
-        }
