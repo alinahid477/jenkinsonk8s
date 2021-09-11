@@ -1,4 +1,7 @@
 #!/bin/bash
+
+unset COMPLETE
+
 export $(cat /root/.env | xargs)
 
 if [ -z "$COMPLETE" ]
@@ -247,7 +250,7 @@ then
     then
         source ~/binaries/jenkinsk8ssetup.sh
     else
-        printf "\n\nUse ~/binaries/jenkinsk8ssetup.sh wizard to complete configs for k8s"
+        printf "\n\nUse ~/binaries/jenkinsk8ssetup.sh wizard to complete configs for k8s (RECOMMENDED)."
         printf "\nOR\nFollow the instructions further to configure Jenkins for k8s in Readme.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
     fi
     
