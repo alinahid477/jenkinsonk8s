@@ -28,6 +28,9 @@ spec:
         securityContext:
           privileged: true
         env:
+        # Read the configuration-as-code from the ConfigMap
+        - name: CASC_JENKINS_CONFIG
+          value: /var/jenkins_config/configuration-as-code.yaml
         - name: JAVA_OPTS
           value: -Xmx2048m -Dhudson.slaves.NodeProvisioner.MARGIN=50 -Dhudson.slaves.NodeProvisioner.MARGIN0=0.85
         ports:
@@ -38,6 +41,9 @@ spec:
         volumeMounts:
         - mountPath: /var/jenkins_home
           name: jenkins
+        - mountPath: /var/jenkins_config
+          name: jenkins-configuration-as-code
+              
         # - mountPath: /var/run/docker.sock
         #   name: docker-sock
         # livenessProbe:
@@ -62,6 +68,10 @@ spec:
       - name: jenkins
         persistentVolumeClaim:
           claimName: jenkins-pvc1
+      # The configuration-as-code ConfigMap
+      - name: jenkins-configuration-as-code
+        configMap:
+          name: jenkins-configuration-as-code
       # - name: docker-sock
       #   hostPath:
       #     path: /var/run/docker.sock

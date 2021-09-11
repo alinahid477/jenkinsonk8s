@@ -23,6 +23,10 @@ then
     printf "Done.\n"
 fi
 
+printf "\n\ndeleting config map for config-as-code plugin\n"
+kubectl delete -f ~/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
+printf "Done.\n"
+
 printf "\nDelete Jenkins services..\n"
 kubectl delete -f ~/kubernetes/jenkins/service.yaml
 printf "Done.\n"

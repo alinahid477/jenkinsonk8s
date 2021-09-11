@@ -1,0 +1,48 @@
+# A Kubernetes ConfigMap providing the configuration-as-code
+# default config for Kubernetes plugin and an example job
+# https://github.com/jenkinsci/configuration-as-code-plugin/tree/master/demos/kubernetes
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jenkins-configuration-as-code
+  namespace: jenkins
+data:
+  configuration-as-code.yaml: |
+    unclassified:
+      location:
+        url: http://JENKINS_ENDPOINT/
+    jenkins:
+      clouds:
+        - kubernetes:
+            name: "kubernetes"
+            skipTlsVerify: true
+            namespace: "jenkins"
+            credentialsId: "jenkinsk8s-cred"
+            jenkinsUrl: "http://JENKINS_ENDPOINT:8080/"
+            jenkinsTunnel: "JENKINS_ENDPOINT:50000"
+            connectTimeout: 5
+            readTimeout: 15
+            containerCapStr: 10
+            maxRequestsPerHostStr: 32
+            retentionTimeout: 5
+    credentials:
+      system:
+        domainCredentials:
+          - credentials:
+              - fileSystemServiceAccountCredential:
+                  id: "jenkinsk8s-cred"
+    jobs:
+      - script: >
+        pipelineJob('configuration-as-code') {
+            definition {
+                cps {
+                    sandbox()
+                    script("""
+                      node('linux-x86_64') {
+                          sh "hostname"
+                      }
+                    """.stripIndent())
+                }
+            }
+        }

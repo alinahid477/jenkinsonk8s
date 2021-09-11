@@ -158,9 +158,10 @@ then
     
     if [[ $confirmed == 'n' || -z $confirmed ]]
     then
-        printf "\nYou can install jenkins at any point by executing the below command:\n"
-        printf "/root/binaries/jenkinsinstall.sh"
-        printf "\n"
+        printf "\nYou can install, delete and configure jenkins at any point by executing the below wizards:\n"
+        printf "/root/binaries/jenkinsinstall.sh\n"
+        printf "/root/binaries/jenkinsdelete.sh\n"
+        printf "/root/binaries/jenkinsk8ssetup.sh\n"
     fi
 else
     printf "\n\nStarting Jenkins installation...\n"

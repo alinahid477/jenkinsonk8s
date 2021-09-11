@@ -97,7 +97,9 @@ then
     kubectl apply -f /tmp/allow-runasnonroot-clusterrole.yaml
     printf "Done.\n"
 
-    
+    printf "\n\ncreating config map for config-as-code plugin\n"
+    kubectl apply -f ~/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
+    printf "Done.\n"
 
     printf "\nCreate PVC for Jenkins ($JENKINS_PVC_STORAGE_CLASS_NAME):\n"
     awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
@@ -170,69 +172,86 @@ then
 
     printf "\nWait max 2m for svc to have external endpoint:\n"
     count=1
+    unset issvcsuccessful
     while true; do
-        sleep 10
+        sleep 20
         svcstatus=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
         if [[ $svcstatus == *"none"* || -z $svcstatus ]]
         then
             if [[ $count -gt 12 ]]
             then
-                printf "\nError: Tired of waiting.\nRun kubectl get svc -n jenkins to check the status yourself...\n"
+                printf "\nError: Tired of waiting.\nRun the below command to check the status yourself after sometime..\nkubectl get svc -n jenkins\n"
                 kubectl get events -n jenkins
                 break
             fi
             printf ".\n"
             ((count=count+1))
         else
+            issvcsuccessful='y'
             kubectl get svc -n jenkins        
             break
         fi
     done
     printf "Done.\n"
 
+    if [[ -z $issvcsuccessful ]]
+    then
+        printf "\nError: Jenkins installation partially succeeded."
+        printf "\nExtended delay experienced brining service type load balancer online - waiting deadline expired."
+        printf "\nYou can take below steps from here:"
+        echo -e "\t1. Troubleshoot integrated network service or check some time later if the network is able to assign external ip to jenkins service."
+        echo -e "\t2. delete the service kubectl delete -f ~/kubernetes/jenkins/service.yaml"
+        echo -e "\t3. re-creare the service kubectl apply -f ~/kubernetes/jenkins/service.yaml"
+        echo -e "\t4. Run ~/binaries/jenkinsk8ssetup.sh to complete the configuration of jenkins for running on k8s."
+    fi
+
+    if [[ $issvcsuccessful == 'y' ]]
+    then
+        jenkinsurl=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
+        printf "\nYou can now access jenkins by browsing http://$jenkinsurl"
+        printf "\nJENKINS_ENDPOINT=$jenkinsurl" >> /root/.env
+        printf "\nJENKINS_USERNAME=admin" >> /root/.env
+    else
+        printf "\nJENKINS_USERNAME=" >> /root/.env
+    fi
+
+    jenkinspodname=$(kubectl get pods -n jenkins | grep jenkins- | awk '{print $1}')
+    temporarypassword=$(kubectl logs $jenkinspodname -n jenkins | awk '/Please use the following password to proceed to installation/{x=NR+2}(NR == x){print}')
+    printf "\nFirst attempt login password is: $temporarypassword"
+    printf "\nJENKINS_PASSWORD=$temporarypassword" >> /root/.env
+    printf "\n"
+
+    printf "\nMarking as complete."
     printf "\nCOMPLETE=YES" >> /root/.env
 
     printf "\n\n"
     printf "*Jenkins deployment complete.*\n"
 
+    unset confirmed
+    if [[ -z $SILENTMODE || $SILENTMODE == 'n']]
+    then
+        while true; do
+            read -p "Confirm to config jenkins configs for k8s [y/n] " yn
+            case $yn in
+                [Yy]* ) confirmed='y'; printf "\nyou confirmed yes\n"; break;;
+                [Nn]* ) printf "\n\nYou said no. \n\nReturning...\n\n"; break;;
+                * ) echo "Please answer yes or no.";;
+            esac
+        done
+    else
+        confirmed='y'
+    fi
 
-    printf "\nRecording external jenkins access url..\n"
-    sleep 5
-    jenkinsurl=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
 
-    jenkinspodname=$(kubectl get pods -n jenkins | grep jenkins- | awk '{print $1}')
-    temporarypassword=$(kubectl logs $jenkinspodname -n jenkins | awk '/Please use the following password to proceed to installation/{x=NR+2}(NR == x){print}')
+    if [[ $confirmed == 'y' ]]
+    then
+        source ~/binaries/jenkinsk8ssetup.sh
+    else
+        printf "\n\nUse ~/binaries/jenkinsk8ssetup.sh wizard to complete configs for k8s"
+        printf "\nOR\nFollow the instructions further to configure Jenkins for k8s in Readme.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
+    fi
     
-    sleep 5
-    # timeout --foreground -s TERM 3 bash -c \
-    count=1
-    while [[ $statusreceived != 200 && $count -lt 12 ]]; do 
-        statusreceived=$(curl -s -o /dev/null -L -w ''%{http_code}'' http://$jenkinsurl)
-        echo "received status: $statusreceived"
-        sleep 10;
-        ((count=count+1))
-    done;
-    # echo success with status: $statusreceived
-
-    printf "\nYou can now access jenkins by browsing http://$jenkinsurl"
-    printf "\nAnd the first login password is: $temporarypassword"
-    printf "\n"
-
-    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 who-am-i --username admin --password $temporarypassword
-    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin pipeline-utility-steps
-    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin kubernetes
-    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin kubernetes-cli
-    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin credentials-binding
-
-    printf "\nDownloading jenkins cli..\n"
-    curl -o /usr/local/bin/jenkins-cli.jar -L http://$jenkinsurl/jnlpJars/jenkins-cli.jar
-    sleep 2
-  	chmod +x /usr/local/bin/jenkins-cli.jar
-    printf "Done\n"
-
-
-
-    printf "\n\nPlease follow the instructions further to configure Jenkins for k8s. in Readme.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
+    
 else
     printf "\n\n\nJenkins deployment is already marked as complete. (If this is not desired please change COMPLETE=\"\" or remove COMPLETE in the .env for new jenkins installation)\n"
     printf "\n\n\nGoing straight to shell access.\n"

@@ -52,9 +52,12 @@ binaries/*
 !binaries/init.sh
 !binaries/jenkinsinstall.sh
 !binaries/jenkinsdelete.sh
+!binaries/jenkinsk8ssetup.sh
+!binaries/credential.template
 .kube/*
 !.kube/.gitkeep 
 .ssh/*
 !.ssh/.gitkeep 
+kubernetes/jenkins/*.credential.*
 
 

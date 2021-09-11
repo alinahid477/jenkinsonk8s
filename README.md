@@ -91,11 +91,11 @@ Get the IP for Jenkins:
     - Kubernetes CLI
 
 8. Add below Credentials via (Jenkins > Manage Jenkins > Manage Credential > Global > Add Credential):
-    - **github-cred**: Repository (Github or Bitbucket or whatever your respository is) credential as Username Password type credential
+    - **pvt-repo-cred**: Repository (Github or Bitbucket or whatever your respository is) credential as Username Password type credential
     
     - **dockerhub-cred**: Dockerhub credential as Username Password based. This is needed because of this recent change in Dockerhub :https://www.docker.com/increase-rate-limits.
 
-    - **harbor-cred**: Harbor (My private registry) credential as username password based
+    - **pvt-registry-cred**: Harbor (My private registry) credential as username password based
 
     - **jenkins-robot-token**: Kubetoken for K8 SA for K8 deployment of type Secret Text. (See below instruction on how to generate this token). We will use this secret in pipeline. *Note: This service account and token to be created in target cluster, the k8s cluster where you will be deploying your applications. NOT jenkins cluster. If you have deployed Jenkins in the same cluster as your workload cluster then continue in the same cluster other wise switch to the target cluster and create the below. If your target cluster is not ready now you can skip this for now and do this step once there is a target k8s cluster for your workload. If there are multiple k8s cluster then do this in every cluster.*
 
