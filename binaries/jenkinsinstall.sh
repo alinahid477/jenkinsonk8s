@@ -1,4 +1,5 @@
 #!/bin/bash
+export $(cat /root/.env | xargs)
 
 if [ -z "$COMPLETE" ]
 then
@@ -18,93 +19,221 @@ then
             esac
         done
     fi
-    export $(cat /root/.env | xargs)
 
     printf "\n\n\n***********Starting installation of Jenkins...*************\n"
+
+
+    printf "\nCreate namespace for Jenkins:\n"
+    kubectl apply -f ~/kubernetes/global/namespace.yaml
+    printf "Done.\n"
 
     printf "\n\n\n***********Prepare cluster for Jenkins...*************\n"
     printf "\n"
 
-    printf "\nPOD security policy:"
-    kubectl apply -f ~/kubernetes/global/allow-runasnonroot-clusterrole.yaml
-    printf "\nDone."
+    printf "\nPOD security policy:\n"
+    unset jenkinspsp
+    isvmwarepsp=$(kubectl get psp | grep -w vmware-system-privileged)
+    if [[ -n $isvmwarepsp ]]
+    then
+        printf "found existing vmware-system-privileged as psp\n"
+        jenkinspsp=vmware-system-privileged
+    else
+        istmcpsp=$(kubectl get psp | grep -w vmware-system-tmc-privileged)
+        if [[ -n $istmcpsp ]]
+        then
+            printf "found existing vmware-system-tmc-privileged as psp\n"
+            jenkinspsp=vmware-system-tmc-privileged
+        else
+            printf "creating new psp called jenkins-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+            jenkinspsp=jenkins-psp-privileged
+            kubectl apply -f ~/kubernetes/global/jenkins-psp.priviledged.yaml
+        fi
+    fi
+    if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
+    then
+        unset pspprompter
+        printf "\nList of available Pod Security Policies:\n"
+        kubectl get psp
+        if [[ -n $jenkinspsp ]]
+        then
+            printf "\nSelected existing pod security policy: $jenkinspsp"
+            printf "\nPress/Hit enter to accept $jenkinspsp"
+            pspprompter=" (selected $jenkinspsp)"  
+        else 
+            printf "\nHit enter to create a new one"          
+        fi
+        printf "\nOR\nType a name from the available list\n"
+        while true; do
+            read -p "pod security policy$pspprompter: " inp
+            if [[ -z $inp ]]
+            then
+                if [[ -z $jenkinspsp ]]
+                then 
+                    printf "\ncreating new psp called jenkins-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+                    jenkinspsp=jenkins-psp-privileged
+                    kubectl apply -f ~/kubernetes/global/jenkins-psp.priviledged.yaml
+                    sleep 2
+                    break
+                else
+                    printf "\nAccepted psp: $jenkinspsp"
+                    break
+                fi
+            else
+                isvalidvalue=$(kubectl get psp | grep -w $inp)
+                if [[ -z $isvalidvalue ]]
+                then
+                    printf "\nYou must provide a valid input.\n"
+                else 
+                    jenkinspsp=$inp
+                    printf "\nAccepted psp: $jenkinspsp"
+                    break
+                fi
+            fi
+        done
+    fi
+    
+    printf "\n\nusing psp $jenkinspsp to create ClusterRole and ClusterRoleBinding\n"
+    awk -v old="POD_SECURITY_POLICY_NAME" -v new="$jenkinspsp" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/global/allow-runasnonroot-clusterrole.yaml > /tmp/allow-runasnonroot-clusterrole.yaml
+    kubectl apply -f /tmp/allow-runasnonroot-clusterrole.yaml
+    printf "Done.\n"
 
-    printf "\nCreate namespace for Jenkins:"
-    kubectl apply -f ~/kubernetes/global/namespace.yaml
-    printf "\nDone."
+    
 
-    printf "\nCreate PVC for Jenkins:"
+    printf "\nCreate PVC for Jenkins ($JENKINS_PVC_STORAGE_CLASS_NAME):\n"
     awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
-    kubectl apply -f ~/tmp/pvc.yaml
-    printf "\nDone."
+    kubectl apply -f /tmp/pvc.yaml
+    printf "Done.\n"
 
-    printf "\nCreate Dockerhub secret in kubernetes namespace for Jenkins:"
+    printf "\nCreate Dockerhub secret in kubernetes namespace for Jenkins:\n"
     kubectl create secret docker-registry dockerhubregkey --docker-server=https://index.docker.io/v2/ --docker-username=$DOCKERHUB_USERNAME --docker-password=$DOCKERHUB_PASSWORD --docker-email=$DOCKERHUB_EMAIL --namespace jenkins
-    printf "\nDone."
+    printf "Done.\n"
 
-    printf "\nCreate Service Account with Dockerhub secret name in kubernetes namespace for Jenkins:"
+    printf "\nCreate Service Account with Dockerhub secret name in kubernetes namespace for Jenkins:\n"
     kubectl -n jenkins apply -f ~/kubernetes/jenkins/service-account.yaml
-    printf "\nDone."
+    printf "Done.\n"
 
-    printf "\nCreate RBAC for Jenkins:"
+    printf "\nCreate RBAC for Jenkins:\n"
     kubectl -n jenkins apply -f ~/kubernetes/jenkins/rbac.yaml
-    printf "\nDone."
+    printf "Done.\n"
 
-    printf "\nVerify get sa and get secret:"
+    printf "\nVerify get sa and get secret:\n"
     kubectl get sa -n jenkins
     kubectl get secret -n jenkins
-    printf "\nDone."
+    printf "Done.\n"
 
     if [[ -n  $SELFSIGNED_CERT_REGISTRY_URL ]]
     then
-        printf "\nIntegration to Harbor private registry:"
+        printf "\nIntegration to Harbor private registry:\n"
         awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$SELFSIGNED_CERT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
         kubectl apply -f /tmp/allow-insecure-registries.yaml
-        printf "\nDone."
+        printf "Done.\n"
     fi
     
 
-    printf "\nDeploy Jenkins:"
+    printf "\nDeploy Jenkins:\n"
     kubectl apply -f ~/kubernetes/jenkins/deployment.yaml
-    printf "\nDone."
+    printf "Done.\n"
 
+    sleep 3
 
-    printf "\nWait 5 mins for pods to be running:"
-    sleep 5m
-    printf "\nDone."
-
-
-    printf "\ncheck replica set status"
+    printf "\ncheck replica set status...\n"
     kubectl get rs -n jenkins
-    printf "\nDone."
+    printf "Done.\n"
 
-    printf "\ncheck pods status"
-    kubectl get pods -n jenkins
-    printf "\nDone."
+    printf "\nWait max 2m for pods to be running:\n"
+    count=1
+    while true; do
+        sleep 10
+        podstatus=$(kubectl get pods -n jenkins | grep jenkins- | awk '{print $3}')
+        if [[ $podstatus == 'Running' ]]
+        then
+            kubectl get pods -n jenkins        
+            break
+        else
+            if [[ $count -gt 12 ]]
+            then
+                printf "\nError: Jenkins pod creation failed. Events are:...\n"
+                kubectl get events -n jenkins
+                printf "Exiting...\n"
+                exit
+            fi
+            printf ".\n"
+            ((count=count+1))
+        fi
+    done
+    printf "Done.\n"
 
-    printf "\nExpose Jenkins through k8s service"
+
+    printf "\nExpose Jenkins through k8s service\n"
     kubectl apply -f ~/kubernetes/jenkins/service.yaml
-    printf "\nDone."
+    printf "Done.\n"
 
-    printf "\nWait 5 mins for svc to have external endpoint:"
-    sleep 5m
-    printf "\nDone."
-
-    printf "\ncheck svc status and record the external ip"
-    kubectl get svc -n jenkins
-    printf "\nDone."
+    printf "\nWait max 2m for svc to have external endpoint:\n"
+    count=1
+    while true; do
+        sleep 10
+        svcstatus=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
+        if [[ $svcstatus == *"none"* || -z $svcstatus ]]
+        then
+            if [[ $count -gt 12 ]]
+            then
+                printf "\nError: Tired of waiting.\nRun kubectl get svc -n jenkins to check the status yourself...\n"
+                kubectl get events -n jenkins
+                break
+            fi
+            printf ".\n"
+            ((count=count+1))
+        else
+            kubectl get svc -n jenkins        
+            break
+        fi
+    done
+    printf "Done.\n"
 
     printf "\nCOMPLETE=YES" >> /root/.env
 
     printf "\n\n"
-    printf "***********\n"
-    printf "*COMPLETE.*\n"
-    printf "***********\n"
+    printf "*Jenkins deployment complete.*\n"
+
+
+    printf "\nRecording external jenkins access url..\n"
+    sleep 5
+    jenkinsurl=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
+
+    jenkinspodname=$(kubectl get pods -n jenkins | grep jenkins- | awk '{print $1}')
+    temporarypassword=$(kubectl logs $jenkinspodname -n jenkins | awk '/Please use the following password to proceed to installation/{x=NR+2}(NR == x){print}')
+    
+    sleep 5
+    # timeout --foreground -s TERM 3 bash -c \
+    count=1
+    while [[ $statusreceived != 200 && $count -lt 12 ]]; do 
+        statusreceived=$(curl -s -o /dev/null -L -w ''%{http_code}'' http://$jenkinsurl)
+        echo "received status: $statusreceived"
+        sleep 10;
+        ((count=count+1))
+    done;
+    # echo success with status: $statusreceived
+
+    printf "\nYou can now access jenkins by browsing http://$jenkinsurl"
+    printf "\nAnd the first login password is: $temporarypassword"
+    printf "\n"
+
+    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 who-am-i --username admin --password $temporarypassword
+    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin pipeline-utility-steps
+    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin kubernetes
+    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin kubernetes-cli
+    java -jar /usr/local/bin/jenkins-cli.jar -s http://$jenkinsurl:8080 install-plugin credentials-binding
+
+    printf "\nDownloading jenkins cli..\n"
+    curl -o /usr/local/bin/jenkins-cli.jar -L http://$jenkinsurl/jnlpJars/jenkins-cli.jar
+    sleep 2
+  	chmod +x /usr/local/bin/jenkins-cli.jar
+    printf "Done\n"
+
+
 
     printf "\n\nPlease follow the instructions further to configure Jenkins for k8s. in Readme.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
 else
     printf "\n\n\nJenkins deployment is already marked as complete. (If this is not desired please change COMPLETE=\"\" or remove COMPLETE in the .env for new jenkins installation)\n"
     printf "\n\n\nGoing straight to shell access.\n"
 fi
-
-/bin/bash

@@ -51,6 +51,7 @@ binaries/*
 !binaries/.gitkeep 
 !binaries/init.sh
 !binaries/jenkinsinstall.sh
+!binaries/jenkinsdelete.sh
 .kube/*
 !.kube/.gitkeep 
 .ssh/*

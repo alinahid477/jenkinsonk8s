@@ -90,10 +90,42 @@ else
     printf "\n\n\n**********login based on kubeconfig...*************\n"
 fi
 
+
+if [[ -n $TMC_API_TOKEN ]]
+then
+    printf "\nChecking TMC cli...\n"
+    ISTMCEXISTS=$(tmc --help)
+    sleep 1
+    if [ -z "$ISTMCEXISTS" ]
+    then
+        printf "\n\ntmc command does not exist.\n\n"
+        printf "\n\nChecking for binary presence...\n\n"
+        IS_TMC_BINARY_EXISTS=$(ls ~/binaries/ | grep tmc)
+        sleep 2
+        if [ -z "$IS_TMC_BINARY_EXISTS" ]
+        then
+            printf "\n\nBinary does not exist in ~/binaries directory.\n"
+            printf "\nIf you could like to attach the newly created TKG clusters to TMC then please download tmc binary from https://{orgname}.tmc.cloud.vmware.com/clidownload and place in the ~/binaries directory.\n"
+            printf "\nAfter you have placed the binary file you can, additionally, uncomment the tmc relevant in the Dockerfile.\n\n"
+        else
+            printf "\n\nTMC binary found...\n"
+            printf "\n\nAdjusting Dockerfile\n"
+            sed -i '/COPY binaries\/tmc \/usr\/local\/bin\//s/^# //' ~/Dockerfile
+            sed -i '/RUN chmod +x \/usr\/local\/bin\/tmc/s/^# //' ~/Dockerfile
+            sleep 2
+            printf "\nDONE..\n"
+            printf "\n\nPlease build this docker container again and run.\n"
+            exit 1
+        fi
+    else
+        printf "\n\ntmc command found.\n\n"
+    fi
+fi
+
 printf "\n\n\n***********This wizard is now connected to the below cluster...*************\n"
 kubectl get ns
 
-if [[ $SILENTMODE == 'y' ]]
+if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
 then
     while true; do
         read -p "Confirm to continue? [y/n] " yn
