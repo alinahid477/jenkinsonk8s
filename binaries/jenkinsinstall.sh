@@ -46,10 +46,10 @@ then
         then
             printf "found existing vmware-system-tmc-privileged as psp\n"
             jenkinspsp=vmware-system-tmc-privileged
-        else
-            printf "creating new psp called jenkins-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
-            jenkinspsp=jenkins-psp-privileged
-            kubectl apply -f ~/kubernetes/global/jenkins-psp.priviledged.yaml
+        # else
+        #     printf "Will create new psp called jenkins-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+        #     jenkinspsp=jenkins-psp-privileged
+            # kubectl apply -f ~/kubernetes/global/jenkins-psp.priviledged.yaml
         fi
     fi
     if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
@@ -94,7 +94,16 @@ then
             fi
         done
     fi
-    
+    if [[ -n $SILENTMODE && $SILENTMODE == 'y' ]]
+    then
+        if [[ -z $jenkinspsp ]]
+        then
+            printf "\ncreating new psp called tbs-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+            jenkinspsp=jenkins-psp-privileged
+            kubectl apply -f ~/kubernetes/global/tbs-psp.priviledged.yaml
+            sleep 2
+        fi
+    fi
     printf "\n\nusing psp $jenkinspsp to create ClusterRole and ClusterRoleBinding\n"
     awk -v old="POD_SECURITY_POLICY_NAME" -v new="$jenkinspsp" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/global/allow-runasnonroot-clusterrole.yaml > /tmp/allow-runasnonroot-clusterrole.yaml
     kubectl apply -f /tmp/allow-runasnonroot-clusterrole.yaml

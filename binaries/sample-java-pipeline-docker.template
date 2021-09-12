@@ -1,0 +1,106 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.41">
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.93">
+    <script>podTemplate( //idleMinutes: 30, 
+    yaml: &apos;&apos;&apos;
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: jenkins
+spec:
+  volumes:
+    - name: docker-insecure-registries
+      configMap:
+        name: allow-insecure-registries
+        items:
+          - key: daemon.json
+            path: daemon.json
+    - name: cache
+      hostPath:
+        path: /tmp
+        type: Directory
+    - name: m2
+      persistentVolumeClaim:
+        claimName: jenkins-pvc1
+  serviceAccountName: jenkins-sa
+  containers:
+  - name: docker
+    image: docker:19.03.1-dind
+    securityContext:
+      privileged: true
+    env:
+      - name: DOCKER_TLS_CERTDIR
+        value: &quot;&quot;
+    volumeMounts:
+    - name: cache
+      mountPath: /var/lib/docker
+    - name: docker-insecure-registries
+      mountPath: /etc/docker/daemon.json
+      subPath: daemon.json
+  - name: maven
+    image: maven:latest
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - mountPath: &quot;/root/.m2&quot;
+      name: m2
+&apos;&apos;&apos;) {
+    node(POD_LABEL) {
+        
+        stage(&quot;GIT&quot;) {
+          git credentialsId: &apos;pvt-repo-cred&apos;, branch: &apos;main&apos;, url: &apos;https://github.com/alinahid477/vmw-calculator-addservice.git&apos;
+        }
+        
+        stage(&quot;CI-TEST&quot;) {
+          container(&apos;maven&apos;) {
+              sh &quot;&quot;&quot;
+                  mvn test
+              &quot;&quot;&quot;
+          }
+        }
+        
+        stage(&quot;CD-DOCKER&quot;) {
+          container(&apos;docker&apos;) {
+            withCredentials([usernamePassword(credentialsId: &apos;dockerhub-cred&apos;, usernameVariable: &apos;USERNAME&apos;, passwordVariable: &apos;PASSWORD&apos;)]) {
+              sh &quot;&quot;&quot; 
+                  docker login -u ${USERNAME} -p ${PASSWORD} &amp;&amp;
+                  docker build -t PVT_REGISTRY_URL/addservice:latest .
+                  docker logout
+              &quot;&quot;&quot;    
+                
+            }
+            withCredentials([usernamePassword(credentialsId: &apos;pvt-registry-cred&apos;, usernameVariable: &apos;USERNAME&apos;, passwordVariable: &apos;PASSWORD&apos;)]) {
+              sh &quot;&quot;&quot;
+                  docker login -u ${USERNAME} -p ${PASSWORD} PVT_REGISTRY_URL &amp;&amp;
+                  docker push PVT_REGISTRY_URL/addservice:latest
+              &quot;&quot;&quot;
+            }
+          }
+        }
+        
+        stage(&quot;K8S&quot;) {
+          withKubeConfig([credentialsId: &apos;jenkins-robot&apos;,
+                      serverUrl: &apos;K8S_CLUSTER_URL&apos;,
+                      clusterName: &apos;K8S_CLUSTER_NAME&apos;,
+                      namespace: &apos;default&apos;
+                      ]) {
+            sh &apos;curl -LO &quot;https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl&quot;&apos;
+            sh &apos;chmod 777 ./kubectl&apos;
+            sh &apos;./kubectl apply -f kubernetes/deployment.yaml&apos;
+            // sh &apos;./kubectl patch deployment addservice-deploy -p \&quot;{\\&quot;spec\\&quot;: {\\&quot;template\\&quot;: {\\&quot;metadata\\&quot;: { \\&quot;labels\\&quot;: {  \\&quot;redeploy\\&quot;: \\&quot;$(date +%s)\\&quot;}}}}}\&quot; -n calculator&apos;
+          }
+        }
+                  
+        
+    }
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

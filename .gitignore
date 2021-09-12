@@ -53,7 +53,11 @@ binaries/*
 !binaries/jenkinsinstall.sh
 !binaries/jenkinsdelete.sh
 !binaries/jenkinsk8ssetup.sh
+!binaries/jenkins-robot-token-generator.sh
 !binaries/credential.template
+!binaries/credential.secret-text.template
+!binaries/sample-java-pipeline-tbs.template
+!binaries/sample-java-pipeline-docker.template
 .kube/*
 !.kube/.gitkeep 
 .ssh/*
