@@ -503,7 +503,7 @@ then
         printf "\ncreating credential for jenkins-robot..\n"
         cp ~/binaries/credential.secret-text.template /tmp/jenkins-robot.credential.xml
         sed -i 's/CREDENTIAL_ID/jenkins-robot/g' /tmp/jenkins-robot.credential.xml
-        awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_DOCKERHUB_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/jenkins-robot.credential.xml > ~/kubernetes/jenkins/jenkins-robot.credential.xml
+        awk -v old="CREDENTIAL_PASSWORD" -v new="$jenkinsrobottoken" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/jenkins-robot.credential.xml > ~/kubernetes/jenkins/jenkins-robot.credential.xml
         sleep 1
         java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/jenkins-robot.credential.xml
         sleep 2
