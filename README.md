@@ -18,6 +18,8 @@ This is a bootstrapped docker that will
 - After the install and necessary configs the wizard will display default first login url and password
 
 
+***If you are cloning in windows machine be sure to use `--config core.autocrlf=input` flag keep files intact to avoid this error `standard_init_linux.go:175: exec user process caused "no such file or directory`.***
+
 ## Prepare
 
 ### Local environment
