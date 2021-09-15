@@ -8,12 +8,14 @@ For details step by step deployment follow [DETAILS.md](DETAILS.md)
 This is a bootstrapped docker that will
 - Have all necessary components to deploy jenkins on cluster
 - a bash script that will deploy jenkins on a k8s cluster
-  - this assumes that cluster is on vsphere with Tanzu 
-  - on other cloud coming soon
   - the bash script will auto gain access to k8s cluster based on the input on .env file 
   - and deploy jenkins on k8s cluster in a namespace called jenkins (namespace will be created as well).
   - The bash script will do the deployment process only once (the first time it runs it) and mark it as complete (by adding COMPLETE=yes) in the .env file.
-- After the install bash script will mark it as complete and expose access to shell. 
+  - It will also create and configure necessary plugins for jenkins running on k8s (eg: kubernetes, kubernetes cli, pipeline utility etc plugin configured)
+  - It will also create a sample pipeline based on the user input
+    - integrating with TBS OR
+    - integrating with container registry directly
+- After the install and necessary configs the wizard will display default first login url and password
 
 
 ## Prepare
