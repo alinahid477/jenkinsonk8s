@@ -70,4 +70,4 @@ docker run -it --rm -v ${PWD}:/root/ --add-host kubernetes:127.0.0.1 --name jenk
 
 **Now Jenkins is good to go with Kubernetes and will scale per job.**
 
-Checkout sample Jenkins file here: 
+Checkout sample pipeline definition in the sample-java pipeline it will create as part of the deployment. You can save it as Jenkins file for your own pipeline.  
