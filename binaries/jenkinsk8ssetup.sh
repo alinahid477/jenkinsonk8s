@@ -61,6 +61,16 @@ while [[ -z $JENKINS_USERNAME || -z $JENKINS_PASSWORD ]]; do
     then
         returnOrexit
     fi
+    isexists=$(cat /root/.env | grep -w JENKINS_USERNAME)
+    if [[ -z $isexists ]]
+    then
+        printf "\nJENKINS_USERNAME=" >> /root/.env
+    fi
+    isexists=$(cat /root/.env | grep -w JENKINS_PASSWORD)
+    if [[ -z $isexists ]]
+    then
+        printf "\nJENKINS_PASSWORD=" >> /root/.env
+    fi
     while true; do
         read -p "Confirm to continue? [y/n] " yn
         case $yn in
