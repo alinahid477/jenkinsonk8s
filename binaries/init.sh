@@ -23,13 +23,17 @@ then
             if [[ -n $BASTION_HOST ]]
             then
                 ssh -i /root/.ssh/id_rsa -4 -fNT -L 443:$TKG_SUPERVISOR_ENDPOINT:443 $BASTION_USERNAME@$BASTION_HOST
-            fi
-            curl -kL https://localhost/wcp/plugin/linux-amd64/vsphere-plugin.zip -o ~/binaries/vsphere-plugin.zip
+                curl -kL https://localhost/wcp/plugin/linux-amd64/vsphere-plugin.zip -o ~/binaries/vsphere-plugin.zip
+                sleep 1
+                fuser -k 443/tcp
+            else 
+                curl -kL https://$TKG_SUPERVISOR_ENDPOINT/wcp/plugin/linux-amd64/vsphere-plugin.zip -o ~/binaries/vsphere-plugin.zip
+            fi            
             unzip ~/binaries/vsphere-plugin.zip -d ~/binaries/vsphere-plugin/
             mv ~/binaries/vsphere-plugin/bin/kubectl-vsphere ~/binaries/
             rm -R ~/binaries/vsphere-plugin/
             rm ~/binaries/vsphere-plugin.zip
-            fuser -k 443/tcp
+            
             printf "\n\nkubectl-vsphere is now downloaded in ~/binaries/...\n"
         fi
         printf "\n\nAdjusting the dockerfile to incluse kubectl-binaries...\n"
