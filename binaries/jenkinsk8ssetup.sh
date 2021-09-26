@@ -381,9 +381,9 @@ then
     sleep 5m
     printf "Done.\n"
 
-    printf "\nSafe restart and wait 5min\n"
+    printf "\nSafe restart and wait 2min\n"
     java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD safe-restart
-    sleep 5m
+    sleep 2m
     printf "Done.\n"
     sed -i '/JENKINS_PLUGINS_INSTALLED/d' /root/.env
     printf "\nJENKINS_PLUGINS_INSTALLED=y" >> /root/.env
@@ -541,5 +541,7 @@ printf "\nJENKINS_CONFIG_COMPLETE=y" >> /root/.env
 printf "\n* Jenkins config for k8s complete. *\n"
 printf "\nPlease login into jenkins via the $jenkinsurl"
 printf "\nusing\n\tusername: $JENKINS_USERNAME\n\tpassword: $JENKINS_PASSWORD"
+
+printf "\n\nWhen prompted for install plugin please select recommended plugins and proceed as usual.\n"
 
 printf "\n\n"
