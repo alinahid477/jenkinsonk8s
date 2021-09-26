@@ -2,6 +2,7 @@
 
 <img src="images/logo.png" alt="Jenkins on K8s" width=200 height=210/> 
 
+***If you are cloning in windows machine be sure to use `--config core.autocrlf=input` flag keep files intact to avoid this error `standard_init_linux.go:175: exec user process caused "no such file or directory`.***
 
 For details step by step deployment follow [DETAILS.md](DETAILS.md)
 
@@ -16,9 +17,6 @@ This is a bootstrapped docker that will
     - integrating with TBS OR
     - integrating with container registry directly
 - After the install and necessary configs the wizard will display default first login url and password
-
-
-***If you are cloning in windows machine be sure to use `--config core.autocrlf=input` flag keep files intact to avoid this error `standard_init_linux.go:175: exec user process caused "no such file or directory`.***
 
 ## Prepare
 
