@@ -334,3 +334,5 @@ STEP 6: Configure the Kubernetes plugin:
 `grep 'certificate-authority-data' $HOME/.kube/config | awk '{print $2}' | base64 -d | openssl x509 -text`
 
 `kubectl get configmap harbor-allow-insecure-registries -o jsonpath='{.data.daemon\.json}' -n calculator`
+
+`--config core.autocrlf=input` git clone param to avoid git adding an extra CR (^M) character before each LF.

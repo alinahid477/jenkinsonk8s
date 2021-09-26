@@ -2,8 +2,6 @@
 
 <img src="images/logo.png" alt="Jenkins on K8s" width=200 height=210/> 
 
-***If you are cloning in windows machine be sure to use `--config core.autocrlf=input` flag keep files intact to avoid this error `standard_init_linux.go:175: exec user process caused "no such file or directory`.***
-
 For details step by step deployment follow [DETAILS.md](DETAILS.md)
 
 This is a bootstrapped docker that will
@@ -61,9 +59,15 @@ Local machine with docker-ce or docker-ee installed on it.
 
 ## Docker build and run
 
+### for linux or mac
 ```
-docker build . -t jenkinsonk8s
-docker run -it --rm -v ${PWD}:/root/ --add-host kubernetes:127.0.0.1 --name jenkinsonk8s jenkinsonk8s /bin/bash
+chmod +x start.sh
+./start.sh jenkinsonk8s
+```
+
+### for windows
+```
+start.bat
 ```
 
 # That's it

@@ -41,7 +41,7 @@ then
         sed -i '/RUN chmod +x \/usr\/local\/bin\/kubectl-vsphere/s/^# //' ~/Dockerfile
 
         printf "\n\nDockerfile is now adjusted with kubectl-vsphre.\n\n"
-        printf "\n\nPlease rebuild the docker image and run again.\n\n"
+        printf "\n\nPlease rebuild the docker image and run again (or ./start.sh jenkinsonk8s).\n\n"
         exit 1
     fi
 
