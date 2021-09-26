@@ -32,8 +32,8 @@ Local machine with docker-ce or docker-ee installed on it.
 - TKG_VSPHERE_SUPERVISOR_ENDPOINT={find the supervisor endpoint from vsphere (eg: Menu>Workload management>clusters>Control Plane Node IP Address). *Leave empty if you are providing your own kubeconfig file in the .kube directory*}
 - TKG_VSPHERE_CLUSTER_NAME={the k8s cluster your are trying to access. *Leave empty if you are providing your own kubeconfig file in the .kube directory*}
 - TKG_VSPHERE_CLUSTER_ENDPOINT={endpoint ip or hostname of the above cluster. Grab it from your vsphere environment. (Menu>Workload Management>Namespaces>Select the namespace where the k8s cluster resides>Compute>VMware Resources>Tanzu Kubernetes Clusters>Control Plane Address[grab the ip of the desired k8s]). *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
-- TKG_VSPHERE_CLUSTER_USERNAME={username for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
-- TKG_VSPHERE_CLUSTER_PASSWORD={password for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_USERNAME={username for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_PASSWORD={password for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
 - DOCKERHUB_USERNAME={dockerhub username -- needed to avoid the dockerhub rate limiting issue}
 - DOCKERHUB_PASSWORD={dockerhub password -- needed to avoid the dockerhub rate limiting issue}
 - DOCKERHUB_EMAIL=
@@ -62,13 +62,15 @@ Local machine with docker-ce or docker-ee installed on it.
 ### for linux or mac
 ```
 chmod +x start.sh
-./start.sh jenkinsonk8s
+./start.sh jenkinsonk8s {forcebuild}
 ```
 
 ### for windows
 ```
-start.bat
+start.bat jenkinsonk8s {forcebuild}
 ```
+
+***use `forcebuild` to force docker build. Otherwise if the image exists it will ignore building.***
 
 # That's it
 
