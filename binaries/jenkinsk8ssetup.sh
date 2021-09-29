@@ -165,6 +165,25 @@ while [[ -z $JENKINS_SECRET_PVT_REGISTRY_USERNAME || -z $JENKINS_SECRET_PVT_REGI
     export $(cat /root/.env | xargs)
 done
 
+while true; do
+    read -p "Is your JENKINS_SECRET_PVT_REGISTRY_URL on self signed certificate? [y/n] " yn
+    case $yn in
+        [Yy]* ) printf "\nJENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT=y" >> /root/.env; printf "\nyou confirmed yes. Response recorded.\n"; break;;
+        [Nn]* ) printf "\nJENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT=n" >> /root/.env; printf "\nYou said no. Response recorded.\n"; break;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
+export $(cat /root/.env | xargs)
+
+if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
+then
+    printf "\nApplying configmap for self signed cert registry:\n"
+    awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
+    kubectl apply -f /tmp/allow-insecure-registries.yaml
+    printf "Done.\n"
+fi
+
+
 printf "\n3. Dockerhub secret (This is required to avoid ratelimiting error from dockerhub)..\n"
 if [[ -n $JENKINS_SECRET_DOCKERHUB_USERNAME && -n $JENKINS_SECRET_DOCKERHUB_PASSWORD ]]
 then
@@ -518,14 +537,19 @@ then
         java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/jenkins-robot.credential.xml
         sleep 2
         printf "Done.\n"
-
-        awk -v old="K8S_CLUSTER_URL" -v new="$clusterurl" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/sample-java-pipeline-$containerbuildertype.template > /tmp/sample-java-pipeline-$containerbuildertype.template
-        awk -v old="K8S_CLUSTER_NAME" -v new="$clustername" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/sample-java-pipeline-$containerbuildertype.template > /tmp/sample-java-pipeline-$containerbuildertype.xml
-        awk -v old="PVT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/sample-java-pipeline-$containerbuildertype.xml > ~/kubernetes/jenkins/sample-java-pipeline-$containerbuildertype.nogit.xml
+        
+        pipelinefilename=sample-java-pipeline-$containerbuildertype
+        if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
+        then
+            pipelinefilename=sample-java-pipeline-sscert-$containerbuildertype
+        fi
+        awk -v old="K8S_CLUSTER_URL" -v new="$clusterurl" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/$pipelinefilename.template > /tmp/$pipelinefilename.template
+        awk -v old="K8S_CLUSTER_NAME" -v new="$clustername" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.template > /tmp/$pipelinefilename.xml
+        awk -v old="PVT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.xml > ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
         sleep 1
         printf "\ncreating pipeline...\n"
 
-        java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-job sample-java-$containerbuildertype < ~/kubernetes/jenkins/sample-java-pipeline-$containerbuildertype.nogit.xml
+        java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-job sample-java-$containerbuildertype < ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
         sleep 2
         printf "Done.\n"
     fi    

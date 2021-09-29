@@ -1,5 +1,6 @@
 <?xml version='1.1' encoding='UTF-8'?>
 <flow-definition plugin="workflow-job@2.41">
+  <actions/>
   <description></description>
   <keepDependencies>false</keepDependencies>
   <properties/>
@@ -12,6 +13,12 @@ metadata:
   namespace: jenkins
 spec:
   volumes:
+    - name: docker-insecure-registries
+      configMap:
+        name: allow-insecure-registries
+        items:
+          - key: daemon.json
+            path: daemon.json
     - name: cache
       hostPath:
         path: /tmp
@@ -31,6 +38,9 @@ spec:
     volumeMounts:
     - name: cache
       mountPath: /var/lib/docker
+    - name: docker-insecure-registries
+      mountPath: /etc/docker/daemon.json
+      subPath: daemon.json
   - name: maven
     image: maven:latest
     command:
@@ -39,6 +49,11 @@ spec:
     volumeMounts:
     - mountPath: &quot;/root/.m2&quot;
       name: m2
+  - name: kpack
+    image: kpack/kp
+    command:
+    - cat
+    tty: true
 &apos;&apos;&apos;) {
     node(POD_LABEL) {
         
@@ -54,26 +69,24 @@ spec:
           }
         }
         
-        stage(&quot;CD-DOCKER&quot;) {
-          container(&apos;docker&apos;) {
-            withCredentials([usernamePassword(credentialsId: &apos;dockerhub-cred&apos;, usernameVariable: &apos;USERNAME&apos;, passwordVariable: &apos;PASSWORD&apos;)]) {
-              sh &quot;&quot;&quot; 
-                  docker login -u ${USERNAME} -p ${PASSWORD} &amp;&amp;
-                  docker build -t PVT_REGISTRY_URL/addservice:latest .
-                  docker logout
-              &quot;&quot;&quot;    
-                
-            }
-            withCredentials([usernamePassword(credentialsId: &apos;pvt-registry-cred&apos;, usernameVariable: &apos;USERNAME&apos;, passwordVariable: &apos;PASSWORD&apos;)]) {
+
+
+        stage(&quot;CD-TBS&quot;) {
+          container(&apos;kpack&apos;) {
+            withKubeConfig([credentialsId: &apos;jenkins-robot&apos;,
+                        serverUrl: &apos;K8S_CLUSTER_URL&apos;,
+                        clusterName: &apos;K8S_CLUSTER_NAME&apos;,
+                        namespace: &apos;default&apos;
+                        ]) {
               sh &quot;&quot;&quot;
-                  docker login -u ${USERNAME} -p ${PASSWORD} PVT_REGISTRY_URL &amp;&amp;
-                  docker push PVT_REGISTRY_URL/addservice:latest
+                kp image save vmw-calculator-addservice-build --git https://github.com/alinahid477/vmw-calculator-addservice.git --git-revision main --tag PVT_REGISTRY_URL/calcaddservice --builder default-builder --wait
               &quot;&quot;&quot;
             }
           }
+          
         }
         
-        stage(&quot;K8S&quot;) {
+        stage(&quot;CD-DEPLOY&quot;) {
           withKubeConfig([credentialsId: &apos;jenkins-robot&apos;,
                       serverUrl: &apos;K8S_CLUSTER_URL&apos;,
                       clusterName: &apos;K8S_CLUSTER_NAME&apos;,

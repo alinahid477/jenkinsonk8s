@@ -58,6 +58,8 @@ binaries/*
 !binaries/credential.secret-text.template
 !binaries/sample-java-pipeline-tbs.template
 !binaries/sample-java-pipeline-docker.template
+!binaries/sample-java-pipeline-sscert-tbs.template
+!binaries/sample-java-pipeline-sscert-docker.template
 .kube/*
 !.kube/.gitkeep 
 .ssh/*

@@ -15,10 +15,10 @@ printf "\n\n\n***********Deleting Jenkins...*************\n"
 
 sleep 2
 
-if [[ -n  $SELFSIGNED_CERT_REGISTRY_URL ]]
+if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
 then
     printf "\nDelete selfsigned cert configmap...\n"
-    awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$SELFSIGNED_CERT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
+    awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
     kubectl delete -f /tmp/allow-insecure-registries.yaml
     printf "Done.\n"
 fi

@@ -135,15 +135,6 @@ then
     kubectl get secret -n jenkins
     printf "Done.\n"
 
-    if [[ -n  $SELFSIGNED_CERT_REGISTRY_URL ]]
-    then
-        printf "\nIntegration to Harbor private registry:\n"
-        awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$SELFSIGNED_CERT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
-        kubectl apply -f /tmp/allow-insecure-registries.yaml
-        printf "Done.\n"
-    fi
-    
-
     printf "\nDeploy Jenkins:\n"
     kubectl apply -f ~/kubernetes/jenkins/deployment.yaml
     printf "Done.\n"

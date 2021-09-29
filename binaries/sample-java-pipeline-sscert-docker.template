@@ -12,6 +12,12 @@ metadata:
   namespace: jenkins
 spec:
   volumes:
+    - name: docker-insecure-registries
+      configMap:
+        name: allow-insecure-registries
+        items:
+          - key: daemon.json
+            path: daemon.json
     - name: cache
       hostPath:
         path: /tmp
@@ -31,6 +37,9 @@ spec:
     volumeMounts:
     - name: cache
       mountPath: /var/lib/docker
+    - name: docker-insecure-registries
+      mountPath: /etc/docker/daemon.json
+      subPath: daemon.json
   - name: maven
     image: maven:latest
     command:
