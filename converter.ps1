@@ -3,7 +3,7 @@ Foreach-Object {
 	$folder=$_.FullName
 	Write-Output "processing dir ... $folder"
 
-	Get-ChildItem $folder\* -Include *.sh, *.yaml |
+	Get-ChildItem $folder\* -Include *.sh, *.yaml, *.template |
 		Foreach-Object {
 			$original_file =$_.FullName
 			Write-Output "processing $original_file..."
