@@ -11,6 +11,7 @@ unset JENKINS_SECRET_DOCKERHUB_PASSWORD
 unset JENKINS_SECRET_PVT_REGISTRY_URL
 unset JENKINS_SECRET_PVT_REGISTRY_USERNAME
 unset JENKINS_SECRET_PVT_REGISTRY_PASSWORD
+unset JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT
 unset JENKINS_SECRET_PVT_REPO_USERNAME
 unset JENKINS_SECRET_PVT_REPO_PASSWORD
 unset JENKINS_CONFIG_COMPLETE
@@ -165,15 +166,17 @@ while [[ -z $JENKINS_SECRET_PVT_REGISTRY_USERNAME || -z $JENKINS_SECRET_PVT_REGI
     export $(cat /root/.env | xargs)
 done
 
-while true; do
-    read -p "Is your JENKINS_SECRET_PVT_REGISTRY_URL on self signed certificate? [y/n] " yn
-    case $yn in
-        [Yy]* ) printf "\nJENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT=y" >> /root/.env; printf "\nyou confirmed yes. Response recorded.\n"; break;;
-        [Nn]* ) printf "\nJENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT=n" >> /root/.env; printf "\nYou said no. Response recorded.\n"; break;;
-        * ) echo "Please answer yes or no.";;
-    esac
+while [[ -z $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT ]]; do
+    while true; do
+        read -p "Is your JENKINS_SECRET_PVT_REGISTRY_URL on self signed certificate? [y/n] " yn
+        case $yn in
+            [Yy]* ) printf "\nJENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT=y" >> /root/.env; printf "\nyou confirmed yes. Response recorded.\n"; break;;
+            [Nn]* ) printf "\nJENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT=n" >> /root/.env; printf "\nYou said no. Response recorded.\n"; break;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
+    export $(cat /root/.env | xargs)
 done
-export $(cat /root/.env | xargs)
 
 if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
 then
@@ -221,16 +224,42 @@ while [[ -z $JENKINS_SECRET_DOCKERHUB_USERNAME || -z $JENKINS_SECRET_DOCKERHUB_P
     export $(cat /root/.env | xargs)
 done
 
-
+if [[ $JENKINS_ENDPOINT == \<* ]]
+then
+    unset JENKINS_ENDPOINT
+fi
 
 unset jenkinsurl
+
 printf "\nRecording external jenkins access url..\n"
+count=1
+while [[ -z $JENKINS_ENDPOINT && $count -lt 12 ]]; do
+    tendpoint=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
+    if [[ ! $tendpoint == \<* ]]
+    then
+        JENKINS_ENDPOINT=$tendpoint
+        break
+    else
+        printf "Try# $count of max 12: endpoint not available yet. wait 30s...\n"
+        sleep 30
+    fi
+    ((count=count+1))
+done;
+
 if [[ -z $JENKINS_ENDPOINT ]]
 then
-    JENKINS_ENDPOINT=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
+    printf "\nError: Jenkins endpoint could not be extracted. Please check if jenkins service is exposed in the jenkins namespace and try again."
+    printf "\nQuiting..."
+    returnOrexit
+else
+    if [[ $JENKINS_ENDPOINT == *"http"* ]]
+    then
+        JENKINS_ENDPOINT=$(echo ${JENKINS_ENDPOINT//http:\/\//})
+        printf "\nENDPOINT: $JENKINS_ENDPOINT"
+    fi
+    jenkinsurl=$(echo "http://$JENKINS_ENDPOINT")
+    printf "\nJenkins URL: $jenkinsurl\n"
 fi
-jenkinsurl=$(echo "http://$JENKINS_ENDPOINT")
-printf "\nJenkins URL: $jenkinsurl\n"
 
 if [ -n "$BASTION_HOST" ]
 then
@@ -245,7 +274,7 @@ while [[ $statusreceived != @(200|403) && $count -lt 12 ]]; do
     echo "received status: $statusreceived."
     if [[ $statusreceived != @(200|403) ]]
     then
-        echo "Retrying in 30s..."
+        echo "Try# $count of max 12: Retrying in 30s..."
         sleep 30
     else
         break
@@ -277,14 +306,14 @@ fi
 # printf "\nsleep\n"
 # sleep 10
 
-
-
 if [[ -z $JENKINS_CONFIG_AS_CODE_CONFIGMAP || $JENKINS_CONFIG_AS_CODE_CONFIGMAP == 'n' ]]
 then
+    printf "\ncreating config map for config-as-code plugin\n"
     awk -v old="JENKINS_ENDPOINT" -v new="$JENKINS_ENDPOINT" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml > /tmp/jenkins-config-as-code-plugin.configmap.yaml
     kubectl apply -f /tmp/jenkins-config-as-code-plugin.configmap.yaml
     sed -i '/JENKINS_CONFIG_AS_CODE_CONFIGMAP/d' /root/.env
     printf "\nJENKINS_CONFIG_AS_CODE_CONFIGMAP=y" >> /root/.env
+    printf "Done.\n"
 else
     printf "\nJENKINS_CONFIG_AS_CODE_CONFIGMAP marked as complete in .env file. No configmap will be deployed.\n"
 fi
@@ -468,7 +497,7 @@ fi
 
 if [[ -z $JENKINS_SAMPLE_PIPELINE_APPLIED || $JENKINS_SAMPLE_PIPELINE_APPLIED == 'n' ]]
 then
-    printf "\ncreating sample-java pipeline..\n"
+    printf "\nWould you like to create a sample pipeline for example? (Highly Recommended)..\n"
 
     unset confirmed
     if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
@@ -556,7 +585,7 @@ then
     sed -i '/JENKINS_SAMPLE_PIPELINE_APPLIED/d' /root/.env
     printf "\nJENKINS_SAMPLE_PIPELINE_APPLIED=y" >> /root/.env
 else
-    printf "\nJENKINS_SAMPLE_PIPELINE_APPLIED is marked as complete. No sample pipeline will be created. \n"
+    printf "\nJENKINS_SAMPLE_PIPELINE_APPLIED is not marked as complete. No sample pipeline will be created. \n"
 fi
 
 sed -i '/JENKINS_CONFIG_COMPLETE/d' /root/.env

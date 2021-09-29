@@ -210,8 +210,22 @@ then
 
     if [[ $issvcsuccessful == 'y' ]]
     then
-        jenkinsurl=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
-        printf "\nYou can now access jenkins by browsing http://$jenkinsurl"
+        printf "\nRecording external jenkins access url..\n"
+        count=1
+        while [[ -z $JENKINS_ENDPOINT && $count -lt 12 ]]; do
+            tendpoint=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
+            if [[ ! $tendpoint == \<* ]]
+            then
+                JENKINS_ENDPOINT=$tendpoint
+                break
+            else
+                printf "Try# $count of max 12: endpoint not available yet. wait 30s...\n"
+                sleep 30
+            fi
+            ((count=count+1))
+        done;
+        jenkinsurl=$(echo "http://$JENKINS_ENDPOINT")
+        printf "\n\n\nYou can now access jenkins by browsing $jenkinsurl"
         printf "\nJENKINS_ENDPOINT=$jenkinsurl" >> /root/.env
         printf "\nJENKINS_USERNAME=admin" >> /root/.env
     else
@@ -228,7 +242,7 @@ then
     printf "\nCOMPLETE=YES" >> /root/.env
 
     printf "\n\n"
-    printf "*Jenkins deployment complete.*\n"
+    printf "*Jenkins deployment complete.*\n\n\n"
 
     unset confirmed
     if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
@@ -251,7 +265,7 @@ then
         source ~/binaries/jenkinsk8ssetup.sh
     else
         printf "\n\nUse ~/binaries/jenkinsk8ssetup.sh wizard to complete configs for k8s (RECOMMENDED)."
-        printf "\nOR\nFollow the instructions further to configure Jenkins for k8s in Readme.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
+        printf "\nOR\nFollow the instructions further to configure Jenkins for k8s in DETAILS.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
     fi
     
     
