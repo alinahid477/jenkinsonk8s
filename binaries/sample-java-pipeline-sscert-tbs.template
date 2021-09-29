@@ -13,34 +13,11 @@ metadata:
   namespace: jenkins
 spec:
   volumes:
-    - name: docker-insecure-registries
-      configMap:
-        name: allow-insecure-registries
-        items:
-          - key: daemon.json
-            path: daemon.json
-    - name: cache
-      hostPath:
-        path: /tmp
-        type: Directory
     - name: m2
       persistentVolumeClaim:
         claimName: jenkins-pvc1
   serviceAccountName: jenkins-sa
   containers:
-  - name: docker
-    image: docker:19.03.1-dind
-    securityContext:
-      privileged: true
-    env:
-      - name: DOCKER_TLS_CERTDIR
-        value: &quot;&quot;
-    volumeMounts:
-    - name: cache
-      mountPath: /var/lib/docker
-    - name: docker-insecure-registries
-      mountPath: /etc/docker/daemon.json
-      subPath: daemon.json
   - name: maven
     image: maven:latest
     command:
