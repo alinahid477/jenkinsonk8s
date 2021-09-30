@@ -33,9 +33,10 @@ spec:
     tty: true
 &apos;&apos;&apos;) {
     node(POD_LABEL) {
-        
+        def scmVars
+
         stage(&quot;GIT&quot;) {
-          git credentialsId: &apos;pvt-repo-cred&apos;, branch: &apos;main&apos;, url: &apos;https://github.com/alinahid477/vmw-calculator-addservice.git&apos;
+          scmVars=git credentialsId: &apos;pvt-repo-cred&apos;, branch: &apos;main&apos;, url: &apos;https://github.com/alinahid477/vmw-calculator-addservice.git&apos;
         }
         
         stage(&quot;CI-TEST&quot;) {
@@ -56,7 +57,7 @@ spec:
                         namespace: &apos;default&apos;
                         ]) {
               sh &quot;&quot;&quot;
-                kp image save vmw-calculator-addservice-build --git https://github.com/alinahid477/vmw-calculator-addservice.git --git-revision main --tag PVT_REGISTRY_URL/calcaddservice --builder default-builder --wait
+                kp image save vmw-calculator-addservice-build --git https://github.com/alinahid477/vmw-calculator-addservice.git --git-revision ${scmVars.GIT_COMMIT} --tag PVT_REGISTRY_URL/calcaddservice --builder default-builder --wait
               &quot;&quot;&quot;
             }
           }

@@ -68,7 +68,7 @@ spec:
             withCredentials([usernamePassword(credentialsId: &apos;dockerhub-cred&apos;, usernameVariable: &apos;USERNAME&apos;, passwordVariable: &apos;PASSWORD&apos;)]) {
               sh &quot;&quot;&quot; 
                   docker login -u ${USERNAME} -p ${PASSWORD} &amp;&amp;
-                  docker build -t PVT_REGISTRY_URL/addservice:latest .
+                  docker build -t PVT_REGISTRY_URL/calcaddservice:latest .
                   docker logout
               &quot;&quot;&quot;    
                 
@@ -76,7 +76,7 @@ spec:
             withCredentials([usernamePassword(credentialsId: &apos;pvt-registry-cred&apos;, usernameVariable: &apos;USERNAME&apos;, passwordVariable: &apos;PASSWORD&apos;)]) {
               sh &quot;&quot;&quot;
                   docker login -u ${USERNAME} -p ${PASSWORD} PVT_REGISTRY_URL &amp;&amp;
-                  docker push PVT_REGISTRY_URL/addservice:latest
+                  docker push PVT_REGISTRY_URL/calcaddservice:latest
               &quot;&quot;&quot;
             }
           }
