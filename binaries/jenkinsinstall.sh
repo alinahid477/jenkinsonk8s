@@ -4,7 +4,7 @@ unset COMPLETE
 
 export $(cat /root/.env | xargs)
 
-if [ -z "$COMPLETE" ]
+if [[ -z $COMPLETE || $COMPLETE == "NO" ]]
 then
     if [[ -z $SILENTMODE ]]
     then
@@ -239,6 +239,7 @@ then
     printf "\n"
 
     printf "\nMarking as complete."
+    sed -i '/COMPLETE/d' /root/.env
     printf "\nCOMPLETE=YES" >> /root/.env
 
     printf "\n\n"
