@@ -4,7 +4,25 @@ ls -l /root/binaries/*.sh | awk '{print $9}' | xargs chmod +x
 
 
 export $(cat /root/.env | xargs)
-chmod 600 /root/.ssh/id_rsa
+
+isexists=$(ls -l /root/.ssh/id_rsa)
+if [[ -n $isexists && -n $BASTION_HOST ]]
+then
+    chmod 600 /root/.ssh/id_rsa 
+    isrsacommented=$(cat ~/Dockerfile | grep '#\s*COPY .ssh/id_rsa /root/.ssh/')
+    if [[ -n $isrsacommented ]]
+    then
+        printf "\n\nBoth id_rsa file and bastion host input found...\n"
+        printf "Adjusting the dockerfile to include id_rsa...\n"
+        
+        sed -i '/COPY .ssh\/id_rsa \/root\/.ssh\//s/^# //' ~/Dockerfile
+        sed -i '/RUN chmod 600 \/root\/.ssh\/id_rsa/s/^# //' ~/Dockerfile
+
+        printf "\n\nDockerfile is now adjusted with id_rsa.\n\n"
+        printf "\n\nPlease rebuild the docker image and run again (or ./start.sh jenkinsonk8s forcebuild).\n\n"
+        exit 1
+    fi
+fi
 
 printf "\n\n\n***********Checking kubeconfig...*************\n"
 
@@ -35,14 +53,18 @@ then
             rm ~/binaries/vsphere-plugin.zip
             
             printf "\n\nkubectl-vsphere is now downloaded in ~/binaries/...\n"
+        else
+            printf "kubectl-vsphere found in binaries dir...\n"
         fi
         printf "\n\nAdjusting the dockerfile to incluse kubectl-binaries...\n"
         sed -i '/COPY binaries\/kubectl-vsphere \/usr\/local\/bin\//s/^# //' ~/Dockerfile
         sed -i '/RUN chmod +x \/usr\/local\/bin\/kubectl-vsphere/s/^# //' ~/Dockerfile
 
         printf "\n\nDockerfile is now adjusted with kubectl-vsphre.\n\n"
-        printf "\n\nPlease rebuild the docker image and run again (or ./start.sh jenkinsonk8s).\n\n"
+        printf "\n\nPlease rebuild the docker image and run again (or ./start.sh jenkinsonk8s forcebuild).\n\n"
         exit 1
+    else
+        printf "\nfound kubectl-vsphere...\n"
     fi
 
     printf "\n\n\n**********vSphere Cluster login...*************\n"
@@ -62,7 +84,7 @@ then
     if [ "$CURRENT_DATE" -gt "$EXISTING_JWT_EXP" ]
     then
         printf "\n\n\n***********Login into cluster...*************\n"
-        if [ -z "$BASTION_HOST" ]
+        if [[ -z $BASTION_HOST ]]
         then
             rm /root/.kube/config
             rm -R /root/.kube/cache
@@ -84,7 +106,7 @@ then
         fi
     else
         printf "\n\n\nCuurent kubeconfig has not expired. Using the existing one found at .kube/config\n"
-        if [ -n "$BASTION_HOST" ]
+        if [[ -n $BASTION_HOST ]]
         then
             printf "\n\n\n***********Creating K8s endpoint Tunnel through bastion $BASTION_USERNAME@$BASTION_HOST ...*************\n"
             ssh -i /root/.ssh/id_rsa -4 -fNT -L 6443:$TKG_VSPHERE_CLUSTER_ENDPOINT:6443 $BASTION_USERNAME@$BASTION_HOST
@@ -92,6 +114,24 @@ then
     fi
 else
     printf "\n\n\n**********login based on kubeconfig...*************\n"
+    if [[ -n $BASTION_HOST ]]
+    then
+        printf "Bastion host specified...\n"
+        sleep 2
+        printf "Extracting server url...\n"
+        serverurl=$(awk '/server/ {print $NF;exit}' /root/.kube/config | awk -F/ '{print $3}' | awk -F: '{print $1}')
+        printf "server url: $serverurl\n"
+        printf "Extracting port...\n"
+        port=$(awk '/server/ {print $NF;exit}' /root/.kube/config | awk -F/ '{print $3}' | awk -F: '{print $2}')
+        if [[ -z $port ]]
+        then
+            port=80
+        fi
+        printf "port: $port\n"
+        printf "\n\n\n***********Creating K8s endpoint Tunnel through bastion $BASTION_USERNAME@$BASTION_HOST ...*************\n"
+        ssh -i /root/.ssh/id_rsa -4 -fNT -L $port:$serverurl:$port $BASTION_USERNAME@$BASTION_HOST
+        sleep 10
+    fi
 fi
 
 
