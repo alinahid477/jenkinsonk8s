@@ -56,7 +56,7 @@ Local machine with docker-ce or docker-ee installed on it.
 **Place required binaries in the binaries directory**
 - **tmc** (optional) --> required only when you are using tmc supplied kubeconfig
 
-### Kubeconfig
+### Kubeconfig (optional)
 
 ***If your k8s cluster is a TKG cluster in vSphere AND you have TKG values filled in your .env file (as mentioned above) skip this section.***
 
@@ -64,6 +64,13 @@ If you are accessing the cluster through a kubeconfig file (and not vSphere sso,
 - copy the kubeconfig file (eg: `~/.kube/config`) and place it in .kube dir (`cp ~/.kube/config .kube/`) of this location.
 - ***Make sure that your the kubeconfig file placed in the .kube dir only contains 1 server endpoint (eg: `server: https://my.domain.com:6443`)***
 - ***Make sure the name of the kubeconfig file placed in .kube dir is strictly **config** (no extension)***
+
+### Private key file (optional)
+
+If your k8s cluster api server is in a privated cluster, meaning you cannot access the cluster (eg: `kubectl get ns`) from your local machine directly AND the k8s cluster is only accessible through a jump host aka bastion host
+- you must supply a private key file named `id_rsa` in the `.ssh` of this directory for the bastion host
+- This bootstrap docker container with create a ssh tunnel using the `id_rsa` private key file for authenticating into the bastion host and create ssh tunnel and use relevent port forward. Thus any kubectl commands can be performed locally but will get executed in the remote k8s cluster.
+
 
 ## Docker build and run
 
