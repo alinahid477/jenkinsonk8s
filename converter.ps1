@@ -1,4 +1,4 @@
-Get-ChildItem -Recurse -Filter * | Where-Object {$_.PsIsContainer -eq $True -and ($_.Name -NotLike ".git*" -and $_.Name -NotLike "images*") } | 
+Get-ChildItem -Recurse -Filter * | Where-Object {$_.PsIsContainer -eq $True -and ($_.Name -Like "binaries*" -or $_.Name -Like "images*" -or $_.Name -Like "workload-clusters*") } | 
 Foreach-Object { 
 	$folder=$_.FullName
 	Write-Output "processing dir ... $folder"
