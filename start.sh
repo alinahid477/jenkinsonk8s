@@ -12,6 +12,6 @@ fi
 isexists=$(docker images | grep "\<$name\>")
 if [[ -z $isexists || $forcebuild == "forcebuild" ]]
 then
-    docker build . -t $1
+    docker build . -t $name
 fi
 docker run -it --rm -v ${PWD}:/root/ --add-host kubernetes:127.0.0.1 --name $name $name
