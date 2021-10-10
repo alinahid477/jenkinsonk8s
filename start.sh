@@ -5,7 +5,7 @@ then
     name=''
     forcebuild='forcebuild'
 fi
-if [[ -z $name]]
+if [[ -z $name ]]
 then
     name='jenkinsonk8s'
 fi
