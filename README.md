@@ -1,5 +1,7 @@
 # Jenkins on k8s quick install (bootstrapped docker)
 
+***This repo is a part of Merlin initiative (https://github.com/alinahid477/merlin)***
+
 <img src="images/logo.png" alt="Jenkins on K8s" width=200 height=210/> 
 
 For details step by step deployment follow [DETAILS.md](DETAILS.md)
