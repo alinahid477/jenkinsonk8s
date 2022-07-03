@@ -234,7 +234,7 @@ function configureJenkins () {
     if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
     then
         printf "\nApplying configmap for self signed cert registry:\n"
-        awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
+        awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
         kubectl apply -f /tmp/allow-insecure-registries.yaml
         printf "Done.\n"
     fi
@@ -373,7 +373,7 @@ function configureJenkins () {
     if [[ -z $JENKINS_CONFIG_AS_CODE_CONFIGMAP || $JENKINS_CONFIG_AS_CODE_CONFIGMAP == 'n' ]]
     then
         printf "\ncreating config map for config-as-code plugin\n"
-        awk -v old="JENKINS_ENDPOINT" -v new="$JENKINS_ENDPOINT" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml > /tmp/jenkins-config-as-code-plugin.configmap.yaml
+        awk -v old="JENKINS_ENDPOINT" -v new="$JENKINS_ENDPOINT" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml > /tmp/jenkins-config-as-code-plugin.configmap.yaml
         kubectl apply -f /tmp/jenkins-config-as-code-plugin.configmap.yaml
         sed -i '/JENKINS_CONFIG_AS_CODE_CONFIGMAP/d' $HOME/.env
         printf "\nJENKINS_CONFIG_AS_CODE_CONFIGMAP=y" >> $HOME/.env

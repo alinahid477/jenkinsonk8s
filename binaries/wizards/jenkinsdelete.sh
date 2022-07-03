@@ -29,21 +29,21 @@ function deleteJenkins () {
     if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
     then
         printf "\nDelete selfsigned cert configmap...\n"
-        awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
+        awk -v old="SELFSIGNED_CERT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/binaries/templates/kubernetes/jenkins/allow-insecure-registries.yaml > /tmp/allow-insecure-registries.yaml
         kubectl delete -f /tmp/allow-insecure-registries.yaml
         printf "Done.\n"
     fi
 
     printf "\nDeleting config map for config-as-code plugin...\n"
-    kubectl delete -f ~/templates/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
+    kubectl delete -f ~/binaries/templates/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
     printf "Done.\n"
 
     printf "\nDelete Jenkins services...\n"
-    kubectl delete -f ~/templates/kubernetes/jenkins/service.yaml
+    kubectl delete -f ~/binaries/templates/kubernetes/jenkins/service.yaml
     printf "Done.\n"
 
     printf "\nDelete Jenkins...\n"
-    kubectl delete -f ~/templates/kubernetes/jenkins/deployment.yaml
+    kubectl delete -f ~/binaries/templates/kubernetes/jenkins/deployment.yaml
     printf "Done.\n"
 
     sleep 5
@@ -53,28 +53,28 @@ function deleteJenkins () {
     printf "Done.\n"
 
     printf "\nDelete service account...\n"
-    kubectl -n jenkins delete -f ~/templates/kubernetes/jenkins/service-account.yaml
+    kubectl -n jenkins delete -f ~/binaries/templates/kubernetes/jenkins/service-account.yaml
     printf "Done.\n"
 
     printf "\nDelete RBAC for Jenkins...\n"
-    kubectl -n jenkins delete -f ~/templates/kubernetes/jenkins/rbac.yaml
+    kubectl -n jenkins delete -f ~/binaries/templates/kubernetes/jenkins/rbac.yaml
     printf "Done.\n"
 
     sleep 2
 
     printf "\nDelete PVC for Jenkins...\n"
-    awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
+    awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
     kubectl delete -f /tmp/pvc.yaml
     printf "Done.\n"
 
     sleep 5
 
     printf "\nDelete Jenkins namespace...\n"
-    kubectl delete -f ~/templates/kubernetes/global/namespace.yaml
+    kubectl delete -f ~/binaries/templates/kubernetes/global/namespace.yaml
     printf "Done.\n"
 
     printf "\nDelete PSP for Jenkins...\n"
-    kubectl delete -f ~/templates/kubernetes/global/allow-runasnonroot-clusterrole.yaml
+    kubectl delete -f ~/binaries/templates/kubernetes/global/allow-runasnonroot-clusterrole.yaml
     printf "Done.\n"
 
     printf "\n\n"

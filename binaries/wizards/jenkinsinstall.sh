@@ -94,7 +94,7 @@ function installJenkins () {
     fi
 
     printf "\nCreate namespace for Jenkins...."
-    kubectl apply -f ~/templates/templates/kubernetes/global/namespace.yaml
+    kubectl apply -f ~/binaries/templates/kubernetes/global/namespace.yaml
     printf "Done.\n"
 
     printf "\n\n\n***********Prepare cluster for Jenkins...*************\n"
@@ -114,9 +114,9 @@ function installJenkins () {
             printf "found existing vmware-system-tmc-privileged as psp\n"
             jenkinspsp=vmware-system-tmc-privileged
         # else
-        #     printf "Will create new psp called jenkins-psp-privileged using ~/templates/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+        #     printf "Will create new psp called jenkins-psp-privileged using ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
         #     jenkinspsp=jenkins-psp-privileged
-            # kubectl apply -f ~/templates/templates/kubernetes/global/jenkins-psp.priviledged.yaml
+            # kubectl apply -f ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml
         fi
     fi
     if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
@@ -139,9 +139,9 @@ function installJenkins () {
             then
                 if [[ -z $jenkinspsp ]]
                 then 
-                    printf "\ncreating new psp called jenkins-psp-privileged using ~/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+                    printf "\ncreating new psp called jenkins-psp-privileged using ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
                     jenkinspsp=jenkins-psp-privileged
-                    kubectl apply -f ~/templates/kubernetes/global/jenkins-psp.priviledged.yaml
+                    kubectl apply -f ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml
                     sleep 2
                     break
                 else
@@ -165,23 +165,23 @@ function installJenkins () {
     then
         if [[ -z $jenkinspsp ]]
         then
-            printf "\ncreating new psp called tbs-psp-privileged using ~/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+            printf "\ncreating new psp called tbs-psp-privileged using ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
             jenkinspsp=jenkins-psp-privileged
-            kubectl apply -f ~/templates/kubernetes/global/tbs-psp.priviledged.yaml
+            kubectl apply -f ~/binaries/templates/kubernetes/global/tbs-psp.priviledged.yaml
             sleep 2
         fi
     fi
     printf "\n\nusing psp $jenkinspsp to create ClusterRole and ClusterRoleBinding\n"
-    awk -v old="POD_SECURITY_POLICY_NAME" -v new="$jenkinspsp" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/global/allow-runasnonroot-clusterrole.yaml > /tmp/allow-runasnonroot-clusterrole.yaml
+    awk -v old="POD_SECURITY_POLICY_NAME" -v new="$jenkinspsp" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/kubernetes/global/allow-runasnonroot-clusterrole.yaml > /tmp/allow-runasnonroot-clusterrole.yaml
     kubectl apply -f /tmp/allow-runasnonroot-clusterrole.yaml
     printf "Done.\n"
 
     printf "\n\ncreating config map for config-as-code plugin\n"
-    kubectl apply -f ~/templates/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
+    kubectl apply -f ~/binaries/templates/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
     printf "Done.\n"
 
     printf "\nCreate PVC for Jenkins ($JENKINS_PVC_STORAGE_CLASS_NAME):\n"
-    awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
+    awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
     kubectl apply -f /tmp/pvc.yaml
     printf "Done.\n"
 
@@ -190,11 +190,11 @@ function installJenkins () {
     printf "Done.\n"
 
     printf "\nCreate Service Account with Dockerhub secret name in kubernetes namespace for Jenkins:\n"
-    kubectl -n jenkins apply -f ~/templates/kubernetes/jenkins/service-account.yaml
+    kubectl -n jenkins apply -f ~/binaries/templates/kubernetes/jenkins/service-account.yaml
     printf "Done.\n"
 
     printf "\nCreate RBAC for Jenkins:\n"
-    kubectl -n jenkins apply -f ~/templates/kubernetes/jenkins/rbac.yaml
+    kubectl -n jenkins apply -f ~/binaries/templates/kubernetes/jenkins/rbac.yaml
     printf "Done.\n"
 
     printf "\nVerify get sa and get secret:\n"
@@ -203,7 +203,7 @@ function installJenkins () {
     printf "Done.\n"
 
     printf "\nDeploy Jenkins:\n"
-    kubectl apply -f ~/templates/kubernetes/jenkins/deployment.yaml
+    kubectl apply -f ~/binaries/templates/kubernetes/jenkins/deployment.yaml
     printf "Done.\n"
 
     sleep 3
@@ -238,7 +238,7 @@ function installJenkins () {
 
 
     printf "\nExpose Jenkins through k8s service\n"
-    kubectl apply -f ~/templates/kubernetes/jenkins/service.yaml
+    kubectl apply -f ~/binaries/templates/kubernetes/jenkins/service.yaml
     printf "Done.\n"
 
     printf "\nWait max 2m for svc to have external endpoint:\n"
@@ -272,8 +272,8 @@ function installJenkins () {
         printf "\nExtended delay experienced brining service type load balancer online - waiting deadline expired."
         printf "\nYou can take below steps from here:"
         echo -e "\t1. Troubleshoot integrated network service or check some time later if the network is able to assign external ip to jenkins service."
-        echo -e "\t2. delete the service kubectl delete -f ~/templates/kubernetes/jenkins/service.yaml"
-        echo -e "\t3. re-creare the service kubectl apply -f ~/templates/kubernetes/jenkins/service.yaml"
+        echo -e "\t2. delete the service kubectl delete -f ~/binaries/templates/kubernetes/jenkins/service.yaml"
+        echo -e "\t3. re-creare the service kubectl apply -f ~/binaries/templates/kubernetes/jenkins/service.yaml"
         echo -e "\t4. Run ~/binaries/wizards/jenkinsk8ssetup.sh to complete the configuration of jenkins for running on k8s."
     fi
 
