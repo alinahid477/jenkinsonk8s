@@ -27,22 +27,22 @@ Local machine with docker-ce or docker-ee installed on it.
 
 `mv .env.sample .env`
 
-***If you are using your own kubeconfig file please place the kubeconfig file in .kube/config (`cp /path/to/myown_kubeconfig_file .kube/config`) and ignore the TKG inputs below.***
+***If you are using your own kubeconfig file please place the kubeconfig file in .kube/config (`cp /path/to/myown_kubeconfig_file .kube/config`) and ignore the TKG_VSPHERE_ inputs below.***
 
-- BASTION_HOST={(Optional) ip of bastion/jump host. *Leave empty if you have direct connection*}
-- BASTION_USERNAME={(Optional) if the above is present then the username for the above. *Leave empty if you have direct connection*}
-- TKG_VSPHERE_SUPERVISOR_ENDPOINT={(Optional) find the supervisor endpoint from vsphere (eg: Menu>Workload management>clusters>Control Plane Node IP Address). *Leave empty if you are providing your own kubeconfig file in the .kube directory*}
-- TKG_VSPHERE_CLUSTER_NAME={(Optional) the k8s cluster your are trying to access. *Leave empty if you are providing your own kubeconfig file in the .kube directory*}
-- TKG_VSPHERE_CLUSTER_ENDPOINT={(Optional) endpoint ip or hostname of the above cluster. Grab it from your vsphere environment. (Menu>Workload Management>Namespaces>Select the namespace where the k8s cluster resides>Compute>VMware Resources>Tanzu Kubernetes Clusters>Control Plane Address[grab the ip of the desired k8s]). *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
-- TKG_VSPHERE_USERNAME={(Optional) username for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
-- TKG_VSPHERE_PASSWORD={(Optional) password for accessing the cluster. *Leave empty or ignore if you are providing your own kubeconfig file in the .kube directory*}
+- BASTION_HOST={(Optional) ip of bastion/jump host. *Leave empty or delete this variable if you are not using bastion/jump host to access k8s cluster*. **Important: If you are using bastion host you must also place a private key file called id_rsa in the .ssh dir (and place the public key file id_rsa.pub in the bastion host's user's .ssh dir. This wizard does not allow password based login for bastion host)**}
+- BASTION_USERNAME={(Optional) the username for bastion/jump host. *Leave empty or delete this var if you are not using bastion host*}
+- TKG_VSPHERE_SUPERVISOR_ENDPOINT={(Optional) find the supervisor endpoint from vsphere (eg: Menu>Workload management>clusters>Control Plane Node IP Address). *Leave empty or delete this var if the kubernetes cluster is not vsphere with tanzu cluster or you have a kubeconfig file*}
 - DOCKERHUB_USERNAME={dockerhub username -- Required to avoid the dockerhub rate limiting issue}
 - DOCKERHUB_PASSWORD={dockerhub password -- Required to avoid the dockerhub rate limiting issue}
 - DOCKERHUB_EMAIL={provide any email address}
 - JENKINS_PVC_STORAGE_CLASS_NAME={Storage class attached to the k8s cluster. Run `kubectl get storageclass` to get a list of storage classes. -- Required}
 - TMC_API_TOKEN={*Optional. Only needed if you are using TMC supplied kubeconfig file (and leaving the TKG params empty.)*}
+- TKG_VSPHERE_CLUSTER_NAME={(Optional) the vsphere with tanzu k8s cluster name. *Leave empty if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_CLUSTER_ENDPOINT={(Optional) endpoint ip or hostname of the above cluster. Grab it from your vsphere environment. (Menu>Workload Management>Namespaces>Select the namespace where the k8s cluster resides>Compute>VMware Resources>Tanzu Kubernetes Clusters>Control Plane Address[grab the ip of the desired k8s]). *Leave empty or delete this var if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_USERNAME={(Optional) username for accessing the cluster. *Leave empty or delete this var if you are providing your own kubeconfig file in the .kube directory*}
+- TKG_VSPHERE_PASSWORD={(Optional) password for accessing the cluster. *Leave empty or delete this var if you are providing your own kubeconfig file in the .kube directory*}
 
-***The below fields are NOT needed in interactive mode (wizard). You can leave the below empty (or delete it). The wizard will fill it. The below values are needed only if you are using this docker in pipeline to provision jenkins)***
+***The below fields are NOT needed in interactive mode (wizard). The wizard collect it accordingly. The below values are needed only if you are using this wizard to provision a pipeline in jenkins)***
 - JENKINS_USERNAME=
 - JENKINS_PASSWORD=
 - JENKINS_SECRET_PVT_REPO_USERNAME=
@@ -60,18 +60,17 @@ Local machine with docker-ce or docker-ee installed on it.
 
 ### Kubeconfig (optional)
 
-***If your k8s cluster is a TKG cluster in vSphere AND you have TKG values filled in your .env file (as mentioned above) skip this section.***
+***If you do not have kubeconfig file and your k8s cluster is a vsphere with tanzu cluster (hence, you have filled all the TKG_VSPHERE_ values in .env file) then skip this section.***
 
-If you are accessing the cluster through a kubeconfig file (and not vSphere sso, meaning you have not filled out the TKG values in the .env file) then
-- copy the kubeconfig file (eg: `~/.kube/config`) and place it in .kube dir (`cp ~/.kube/config .kube/`) of this location.
-- ***Make sure that your the kubeconfig file placed in the .kube dir only contains 1 server endpoint (eg: `server: https://my.domain.com:6443`)***
-- ***Make sure the name of the kubeconfig file placed in .kube dir is strictly **config** (no extension)***
+If you are accessing the K8s cluster through a kubeconfig file (and not vSphere sso, meaning you have not filled out the TKG_VSPHERE_ values in the .env file) then
+- copy the kubeconfig file and place it in .kube dir (`cp ~/.kube/config .kube/`) of this location.
+- ***Make sure the name of the kubeconfig file placed in .kube dir is strictly called **config** (not kubeconfig or no extension)***
 
 ### Private key file (optional)
 
 If your k8s cluster api server is in a privated cluster, meaning you cannot access the cluster (eg: `kubectl get ns`) from your local machine directly AND the k8s cluster is only accessible through a jump host aka bastion host
 - you must supply a private key file named `id_rsa` in the `.ssh` of this directory for the bastion host
-- This bootstrap docker container with create a ssh tunnel using the `id_rsa` private key file for authenticating into the bastion host and create ssh tunnel and use relevent port forward. Thus any kubectl commands can be performed locally but will get executed in the remote k8s cluster.
+- This bootstrap docker container will create a ssh tunnel using the `id_rsa` private key file for authenticating into the bastion host and create ssh tunnel and use relevent port forward. Thus any kubectl commands can be performed locally but will get executed in the remote k8s cluster.
 
 
 ## Docker build and run
@@ -79,18 +78,16 @@ If your k8s cluster api server is in a privated cluster, meaning you cannot acce
 ### for linux or mac
 ```
 chmod +x start.sh
-./start.sh jenkinsonk8s
+./start.sh
 ```
 
 ### for windows
 ```
-start.bat jenkinsonk8s
+start.bat
 ```
-
-***Optionally use a second parameter `forcebuild` to force docker build (eg: `start.sh jenkinsonk8s forecebuild`). Otherwise if the image exists it will ignore building.***
+- ***Optionally use a 2nd parameter to supply a name for the image and container (eg: `start.sh jenkinsonk8s`). Default name is `jenkinsonk8s` if you do not supply 2nd parameter.***
+- ***Optionally use a 3rd parameter `forcebuild` to force docker build (eg: `start.sh forecebuild or start.sh jenkinsonk8s forecebuild`). Otherwise if the image exists it will ignore building.***
 
 # That's it
-
-**Now Jenkins is good to go with Kubernetes and will scale per job.**
 
 Checkout sample pipeline definition in the sample-java pipeline it will create as part of the deployment. You can save it as Jenkins file for your own pipeline.  
