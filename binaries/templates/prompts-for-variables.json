@@ -1,0 +1,62 @@
+[
+    {
+        "name": "<JENKINS_USERNAME>",
+        "hint": "Jenkins server username.",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_PASSWORD>",
+        "hint": "Jenkins server password.",
+        "isRecordAsEnvVar": true,
+        "input_type": "password"
+    },
+    {
+        "name": "<JENKINS_SECRET_DOCKERHUB_USERNAME>",
+        "hint": "Dockerhub secret (This is required to avoid ratelimiting error from dockerhub).",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_SECRET_DOCKERHUB_PASSWORD>",
+        "hint": "Dockerhub secret (This is required to avoid ratelimiting error from dockerhub).",
+        "use_special_replace": true,
+        "input_type":"password",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_SECRET_PVT_REPO_USERNAME>",
+        "hint": "Source code (Git repository) credential is required to setup sample pipeline.",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_SECRET_PVT_REPO_PASSWORD>",
+        "hint": "Source code (Git repository) credential is required to setup sample pipeline.",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_SECRET_PVT_REGISTRY_URL>",
+        "hint": "Image registry hostname required to create a sample pipeline.\n.Examples:\nDockerHub: index.docker.io \nHarbor: my-harbor.com/io, \nGCR: gcr.io \nACR: mypvt.azurecr.io",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_SECRET_PVT_REGISTRY_USERNAME>",
+        "hint": "Image registry credential required to create a sample pipeline.",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_SECRET_PVT_REGISTRY_PASSWORD>",
+        "hint": "Image registry credential required to create a sample pipeline.",
+        "isRecordAsEnvVar": true
+    },
+    {
+        "name": "<JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT>",
+        "hint": "Is your JENKINS_SECRET_PVT_REGISTRY_URL on self signed certificate? [options: y or n]",
+        "isRecordAsEnvVar": true,
+        "options": ["y", "n"]
+    },
+
+    {
+        "name": "<JENKINS_PVC_STORAGE_CLASS_NAME>",
+        "hint": "Storageclass name associated/available with this k8s cluster for pvc claim during the jenkins server installation process.",
+        "isRecordAsEnvVar": true
+    }
+]

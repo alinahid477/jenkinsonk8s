@@ -48,22 +48,14 @@ mvnw.cmd
 
 .vmware-cna-saas
 binaries/*
+!binaries/wizards
+!binaries/templates
 !binaries/.gitkeep 
-!binaries/init.sh
-!binaries/jenkinsinstall.sh
-!binaries/jenkinsdelete.sh
-!binaries/jenkinsk8ssetup.sh
-!binaries/jenkins-robot-token-generator.sh
-!binaries/credential.template
-!binaries/credential.secret-text.template
-!binaries/sample-java-pipeline-tbs.template
-!binaries/sample-java-pipeline-docker.template
-!binaries/sample-java-pipeline-sscert-tbs.template
-!binaries/sample-java-pipeline-sscert-docker.template
 .kube/*
 !.kube/.gitkeep 
 .ssh/*
 !.ssh/.gitkeep 
 kubernetes/jenkins/*.credential.*
+kubernetes/jenkins/*.xml
 
 

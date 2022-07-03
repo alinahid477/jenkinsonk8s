@@ -37,7 +37,10 @@ RUN curl -o /usr/local/bin/jq -L https://github.com/stedolan/jq/releases/downloa
 # COPY binaries/tmc /usr/local/bin/
 # RUN chmod +x /usr/local/bin/tmc
 
-COPY binaries/init.sh /usr/local/
+COPY binaries/wizards/init.sh /usr/local/
 RUN chmod +x /usr/local/init.sh
+
+COPY binaries/wizards/merlin.sh /usr/local/bin/merlin
+RUN chmod +x /usr/local/bin/merlin
 
 ENTRYPOINT [ "/usr/local/init.sh" ]

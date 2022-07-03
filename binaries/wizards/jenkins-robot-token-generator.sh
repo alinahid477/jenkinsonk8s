@@ -17,9 +17,9 @@ unset kubeconfig
 helpFunction()
 {
     printf "\nProvide valid params\n\n"
-    echo "Usage: ~/baniries/jenkins-robot-token-generator.sh"
+    echo "Usage: ~/baniries/wizards/jenkins-robot-token-generator.sh"
     echo -e "\t-n | --name name of the robot (default jenkins-robot)"
-    echo -e "\t-n | --namespace namespace name (required)"
+    echo -e "\t-s | --namespace namespace name (required)"
     echo -e "\t-k | --kubeconfig kubeconfig file path (optional)"
     # exit 1 # Exit script after printing help
 }

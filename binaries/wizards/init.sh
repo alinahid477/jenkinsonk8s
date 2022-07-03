@@ -1,13 +1,47 @@
 #!/bin/bash
-printf "\n\nsetting executable permssion to all binaries sh\n\n"
-ls -l /root/binaries/*.sh | awk '{print $9}' | xargs chmod +x
+
+export $(cat $HOME/.env | xargs)
 
 
-export $(cat /root/.env | xargs)
-
-isexists=$(ls -l /root/.ssh/id_rsa)
-if [[ -n $isexists && -n $BASTION_HOST ]]
+if [[ ! -f $HOME/binaries/scripts/returnOrexit.sh ]]
 then
+    if [[ ! -d  "$HOME/binaries/scripts" ]]
+    then
+        mkdir -p $HOME/binaries/scripts
+    fi
+    printf "\n\n************Downloading Common Scripts**************\n\n"
+    curl -L https://raw.githubusercontent.com/alinahid477/common-merlin-scripts/main/scripts/download-common-scripts.sh -o $HOME/binaries/scripts/download-common-scripts.sh
+    chmod +x $HOME/binaries/scripts/download-common-scripts.sh
+    $HOME/binaries/scripts/download-common-scripts.sh jenkinsk8s scripts
+    sleep 1
+    if [[ -n $BASTION_HOST ]]
+    then
+        $HOME/binaries/scripts/download-common-scripts.sh bastion scripts/bastion
+        sleep 1
+    fi
+    printf "\n\n\n///////////// COMPLETED //////////////////\n\n\n"
+    printf "\n\n"
+fi
+
+printf "\n\nsetting executable permssion to all binaries sh\n\n"
+ls -l $HOME/binaries/wizards/*.sh | awk '{print $9}' | xargs chmod +x
+ls -l $HOME/binaries/scripts/*.sh | awk '{print $9}' | xargs chmod +x
+
+## housekeeping
+rm /tmp/checkedConnectedK8s > /dev/null 2>&1
+
+source $HOME/binaries/scripts/returnOrexit.sh
+source $HOME/binaries/scripts/color-file.sh
+source $HOME/binaries/scripts/init-prechecks.sh
+
+
+if [[ -n $BASTION_HOST ]]
+then
+    if [[ ! -f  /root/.ssh/id_rsa ]]
+    then
+        printf "\nERROR: .env file contains bastion host details BUT no id_rsa file exists in .ssh/id_rsa. ...\n"
+        exit 1
+    fi
     chmod 600 /root/.ssh/id_rsa 
     isrsacommented=$(cat ~/Dockerfile | grep '#\s*COPY .ssh/id_rsa /root/.ssh/')
     if [[ -n $isrsacommented ]]
@@ -29,7 +63,6 @@ printf "\n\n\n***********Checking kubeconfig...*************\n"
 
 if [[ -n $TKG_VSPHERE_SUPERVISOR_ENDPOINT ]]
 then
-
     IS_KUBECTL_VSPHERE_EXISTS=$(kubectl vsphere)
     if [ -z "$IS_KUBECTL_VSPHERE_EXISTS" ]
     then 
@@ -166,51 +199,41 @@ then
     fi
 fi
 
-printf "\n\n\n***********This wizard is now connected to the below cluster...*************\n"
-kubectl get ns
+
+unset isexists
+unset ISTMCEXISTS
+unset serverurl
 
 if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
 then
+
     while true; do
         read -p "Confirm to continue? [y/n] " yn
         case $yn in
             [Yy]* ) printf "\nyou confirmed yes\n"; break;;
-            [Nn]* ) printf "\n\nYou said no. \n\nExiting...\n\n"; exit 1;;
+            [Nn]* ) printf "\nYou confirmed no.\n"; exit 1;;
             * ) echo "Please answer yes or no.";;
         esac
-    done
-
-    unset confirmed
-    isexists=$(kubectl get ns | grep -w jenkins)
-    if [[ -z $isexists ]]
-    then
-        printf "\njenkins namespace not detected.\n "
-        while true; do
-            read -p "Confirm to install jenkins on k8s? [y/n] " yn
-            case $yn in
-                [Yy]* ) confirmed='y'; printf "\nyou confirmed yes\n"; break;;
-                [Nn]* ) confirmed='n'; printf "\n\nYou said no. \n\nExiting...\n\n"; break;;
-                * ) echo "Please answer yes or no.";;
-            esac
-        done
-
-        if [[ $confirmed == 'y' ]]
-        then
-            ~/binaries/jenkinsinstall.sh
-        fi        
-    fi
-    
-    if [[ $confirmed == 'n' || -z $confirmed ]]
-    then
-        printf "\nYou can install, delete and configure jenkins at any point by executing the below wizards:\n"
-        printf "/root/binaries/jenkinsinstall.sh\n"
-        printf "/root/binaries/jenkinsdelete.sh\n"
-        printf "/root/binaries/jenkinsk8ssetup.sh\n"
-    fi
+    done    
 else
+    printf "\n\n\n***********This wizard is now connected to the below cluster...*************\n"
+    kubectl get ns
+
     printf "\n\nStarting Jenkins installation...\n"
-    /root/binaries/jenkinsinstall.sh
+    merlin --install-jenkins
 fi
+
+printf "\nYou can install, delete and configure jenkins at any point by executing the below wizards:\n"
+printf "\tmerlin --install-jenkins\n"
+printf "\tmerlin --remove-jenkins\n"
+printf "\tmerlin --configure-jenkins\n"
+
+printf "for more: merlin --help\n"
+
+printf "\n\n\n"
+
+
+
 
 cd ~
 

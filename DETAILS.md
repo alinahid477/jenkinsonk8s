@@ -121,11 +121,11 @@ In the docker container shell run
 
 POD security policy:
 
-`kubectl apply -f kubernetes/global/allow-runasnonroot-clusterrole.yaml`
+`kubectl apply -f templates/kubernetes/global/allow-runasnonroot-clusterrole.yaml`
 
 Create namespace for Jenkins
 
-`kubectl apply -f kubernetes/global/namespace.yaml`
+`kubectl apply -f templates/kubernetes/global/namespace.yaml`
 
 Jenkins needs persistent volume. We already have PV created when we attached storage policy when we created supervisor cluster using the vCentre UI. 
 
@@ -133,7 +133,7 @@ Now all we need to do to give jenkins persistent volume is to create a persisten
 
 ***Replace the 'storageClassName' with your storage class in the yaml file***
 
-`kubectl apply -f kubernetes/global/pvc.yaml`
+`kubectl apply -f templates/kubernetes/global/pvc.yaml`
 
 
 STEP 3: ADD SERVICE ACCOUNT
@@ -149,22 +149,22 @@ To provide Jenkins with access to kubernetes we will create a service account in
 
   *Because pods spinned up (for build worker) by Jenkins server will require downloading image (eg: docker-in-docker, maven, jnlp) from docker hub it can run into dockerhub's recently imposed rate limit issue (). To avoid this we can use a dockerhub regcred in the image pull policy. Since the worker/build POD(s) going to use service account anyways lets associate the image regcred to the service account. This way we don't need to remember to add 'imagePullSecret' is POD template in the Jenkins file.*
 
-  `kubectl create secret docker-registry dockerhubregkey --docker-server=https://index.docker.io/v2/ --docker-username=<dockerhub username> --docker-password=<dockerhubpassword> --docker-email=your@email.com --namespace jenkins`
+  `kubectl create secret docker-registry jenkinsdockerhubregkey --docker-server=https://index.docker.io/v2/ --docker-username=<dockerhub username> --docker-password=<dockerhubpassword> --docker-email=your@email.com --namespace jenkins`
 
   check id regcred is created:
   ```
-  kubectl get secrets dockerhubregkey -n jenkins
+  kubectl get secrets jenkinsdockerhubregkey -n jenkins
   ```
-  ***Also notice that this 'dockerhubregkey' is added in the service-account.yaml file***
-  *incase of patching existing sa `kubectl patch serviceaccount jenkins-sa -p '{"imagePullSecrets": [{"name": "dockerhubregkey"}]}' -n jenkins`*
+  ***Also notice that this 'jenkinsdockerhubregkey' is added in the service-account.yaml file***
+  *incase of patching existing sa `kubectl patch serviceaccount jenkins-sa -p '{"imagePullSecrets": [{"name": "jenkinsdockerhubregkey"}]}' -n jenkins`*
 
 - Create service account
 
-  `kubectl -n jenkins apply -f kubernetes/jenkins/service-account.yaml`
+  `kubectl -n jenkins apply -f templates/kubernetes/jenkins/service-account.yaml`
 
 - Create role, assing permission to the role, bind role to service account. 
 
-  `kubectl -n jenkins apply -f kubernetes/jenkins/rbac.yaml`
+  `kubectl -n jenkins apply -f templates/kubernetes/jenkins/rbac.yaml`
 
 - test/verify:
 
@@ -185,7 +185,7 @@ Now that the cluster is ready lets deploy Jenkins on it.
 
   ***Replace the registry url in the below yaml file with your own registry url***
 
-  `kubectl apply -f kubernetes/jenkins/allow-insecure-registries.yaml`
+  `kubectl apply -f templates/kubernetes/jenkins/allow-insecure-registries.yaml`
    
   **Why?**: Explanation here https://github.com/alinahid477/VMW/tree/main/calcgithub/calc-devops#step-5-integrate-private-container-registry-to-the-cluster
   
@@ -194,7 +194,7 @@ Now that the cluster is ready lets deploy Jenkins on it.
   
 - Deploy Jenkins:
   
-  `kubectl apply -f kubernetes/jenkins/deployment.yaml`
+  `kubectl apply -f templates/kubernetes/jenkins/deployment.yaml`
 
   // check replica set status
 
@@ -215,7 +215,7 @@ Now that the cluster is ready lets deploy Jenkins on it.
 - Expose Jenkins:
   Jenkins is now deployed on Kubernetes cluster named "Jenkins-Cluster". However, we still cannot access it. In order to access it we need to expose it through service which will auto create L4 LB.
   
-  `kubectl apply -f kubernetes/jenkins/service.yaml`
+  `kubectl apply -f templates/kubernetes/jenkins/service.yaml`
 
   // check service status
 

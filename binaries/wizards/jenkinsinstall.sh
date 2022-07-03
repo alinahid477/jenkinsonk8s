@@ -2,59 +2,126 @@
 
 unset COMPLETE
 
-export $(cat /root/.env | xargs)
+export $(cat $HOME/.env | xargs)
 
-if [[ -z $COMPLETE || $COMPLETE == "NO" ]]
-then
-    if [[ -z $SILENTMODE ]]
+source $HOME/binaries/scripts/returnOrexit.sh
+source $HOME/binaries/scripts/color-file.sh
+
+source $HOME/binaries/scripts/extract-and-take-input.sh
+
+function installJenkins () {
+
+    local confirmation=''
+    local isexists=''
+
+    if [[ -n $COMPLETE && $COMPLETE == "YES" ]]
+    then
+        printf "\n\n\nJenkins deployment is already marked as complete. (If this is not desired please change COMPLETE=\"\" or remove the variable from the .env for new jenkins installation)\n"
+        printf "\n\n\nGoing straight to shell access.\n"
+        returnOrexit || return 1
+    fi
+
+
+    isexists=$(kubectl get ns | grep -w jenkins)
+    if [[ -z $isexists ]]
+    then
+        printf "\njenkins namespace not detected.\n "
+    else
+        printf "\n\njenkins namespace detected.\n\n"
+        kubectl get ns -n jenkins
+    fi
+
+    while true; do
+        read -p "Confirm to install jenkins on k8s? [y/n] " yn
+        case $yn in
+            [Yy]* ) confirmation='y'; printf "\nyou confirmed yes\n"; break;;
+            [Nn]* ) confirmation='n'; printf "\nYou confirmed no.\n"; break;;
+            * ) echo "Please answer y or n.";;
+        esac
+    done
+
+    if [[ $confirmation == 'n' ]]
+    then
+        returnOrexit || return 1
+    fi
+
+
+    local jenkinsInputTemplateFileName='jenkins-install-userinputs.template'
+
+    printf "\n\n\n***********Starting Jenkins installation on this k8s...*************\n\n"
+
+
+    printf "Collecting k8s storage class information. Below are the storage classes available for this K8s cluster:\n"
+    kubectl get storageclass
+
+    
+    printf "\nCollect userinput...\n"
+    sleep 2
+    cp $HOME/binaries/templates/$jenkinsInputTemplateFileName /tmp/
+    extractVariableAndTakeInput /tmp/$jenkinsInputTemplateFileName /tmp/doesnotexists || returnOrexit || return 1
+
+    printf "\nReloading environment variables...\n"
+    sleep 5
+    export $(cat $HOME/.env | xargs)
+
+    if [[ -z $SILENTMODE && -z $JENKINS_PVC_STORAGE_CLASS_NAME ]]
     then
         printf "\n\n\n***********The cluster has below storage policies...*************\n"
         kubectl get storageclass
         printf "\nPlease confirm that you have added value from the above as the value for JENKINS_PVC_STORAGE_CLASS_NAME in the .env file."
         printf "\nIf not, now is the time to do so."
         printf "\nOnce you have added the right value in the .env file confirm y to continue.\n"
+        
+        confirmation=''
         while true; do
             read -p "Confirm to continue? [y/n] " yn
             case $yn in
-                [Yy]* ) printf "\nyou confirmed yes\n"; break;;
-                [Nn]* ) printf "\n\nYou said no. \n\nExiting...\n\n"; exit;;
-                * ) echo "Please answer yes or no.";;
+                [Yy]* ) confirmation='y'; printf "\nyou confirmed yes\n"; break;;
+                [Nn]* ) confirmation='n'; printf "\nYou confirmed no.\n"; break;;
+                * ) echo "Please answer y or n.";;
             esac
         done
+        if [[ $confirmation == 'n' ]]
+        then
+            returnOrexit || return 1
+        fi
     fi
 
-    printf "\n\n\n***********Starting installation of Jenkins...*************\n"
+    if [[ -z $JENKINS_PVC_STORAGE_CLASS_NAME ]]
+    then
+        printf "\nError: Required JENKINS_PVC_STORAGE_CLASS_NAME is missing from the .env file.\n"
+        returnOrexit || return 1
+    fi
 
-
-    printf "\nCreate namespace for Jenkins:\n"
-    kubectl apply -f ~/kubernetes/global/namespace.yaml
+    printf "\nCreate namespace for Jenkins...."
+    kubectl apply -f ~/templates/templates/kubernetes/global/namespace.yaml
     printf "Done.\n"
 
     printf "\n\n\n***********Prepare cluster for Jenkins...*************\n"
     printf "\n"
 
     printf "\nPOD security policy:\n"
-    unset jenkinspsp
-    isvmwarepsp=$(kubectl get psp | grep -w vmware-system-privileged)
+    local jenkinspsp=''
+    local isvmwarepsp=$(kubectl get psp | grep -w vmware-system-privileged)
     if [[ -n $isvmwarepsp ]]
     then
         printf "found existing vmware-system-privileged as psp\n"
         jenkinspsp=vmware-system-privileged
     else
-        istmcpsp=$(kubectl get psp | grep -w vmware-system-tmc-privileged)
+        local istmcpsp=$(kubectl get psp | grep -w vmware-system-tmc-privileged)
         if [[ -n $istmcpsp ]]
         then
             printf "found existing vmware-system-tmc-privileged as psp\n"
             jenkinspsp=vmware-system-tmc-privileged
         # else
-        #     printf "Will create new psp called jenkins-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+        #     printf "Will create new psp called jenkins-psp-privileged using ~/templates/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
         #     jenkinspsp=jenkins-psp-privileged
-            # kubectl apply -f ~/kubernetes/global/jenkins-psp.priviledged.yaml
+            # kubectl apply -f ~/templates/templates/kubernetes/global/jenkins-psp.priviledged.yaml
         fi
     fi
     if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
     then
-        unset pspprompter
+        local pspprompter=''
         printf "\nList of available Pod Security Policies:\n"
         kubectl get psp
         if [[ -n $jenkinspsp ]]
@@ -63,7 +130,7 @@ then
             printf "\nPress/Hit enter to accept $jenkinspsp"
             pspprompter=" (selected $jenkinspsp)"  
         else 
-            printf "\nHit enter to create a new one"          
+            printf "\nHit enter to create a new one"
         fi
         printf "\nOR\nType a name from the available list\n"
         while true; do
@@ -72,9 +139,9 @@ then
             then
                 if [[ -z $jenkinspsp ]]
                 then 
-                    printf "\ncreating new psp called jenkins-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+                    printf "\ncreating new psp called jenkins-psp-privileged using ~/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
                     jenkinspsp=jenkins-psp-privileged
-                    kubectl apply -f ~/kubernetes/global/jenkins-psp.priviledged.yaml
+                    kubectl apply -f ~/templates/kubernetes/global/jenkins-psp.priviledged.yaml
                     sleep 2
                     break
                 else
@@ -82,7 +149,7 @@ then
                     break
                 fi
             else
-                isvalidvalue=$(kubectl get psp | grep -w $inp)
+                local isvalidvalue=$(kubectl get psp | grep -w $inp)
                 if [[ -z $isvalidvalue ]]
                 then
                     printf "\nYou must provide a valid input.\n"
@@ -98,36 +165,36 @@ then
     then
         if [[ -z $jenkinspsp ]]
         then
-            printf "\ncreating new psp called tbs-psp-privileged using ~/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+            printf "\ncreating new psp called tbs-psp-privileged using ~/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
             jenkinspsp=jenkins-psp-privileged
-            kubectl apply -f ~/kubernetes/global/tbs-psp.priviledged.yaml
+            kubectl apply -f ~/templates/kubernetes/global/tbs-psp.priviledged.yaml
             sleep 2
         fi
     fi
     printf "\n\nusing psp $jenkinspsp to create ClusterRole and ClusterRoleBinding\n"
-    awk -v old="POD_SECURITY_POLICY_NAME" -v new="$jenkinspsp" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/global/allow-runasnonroot-clusterrole.yaml > /tmp/allow-runasnonroot-clusterrole.yaml
+    awk -v old="POD_SECURITY_POLICY_NAME" -v new="$jenkinspsp" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/global/allow-runasnonroot-clusterrole.yaml > /tmp/allow-runasnonroot-clusterrole.yaml
     kubectl apply -f /tmp/allow-runasnonroot-clusterrole.yaml
     printf "Done.\n"
 
     printf "\n\ncreating config map for config-as-code plugin\n"
-    kubectl apply -f ~/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
+    kubectl apply -f ~/templates/kubernetes/jenkins/jenkins-config-as-code-plugin.configmap.yaml
     printf "Done.\n"
 
     printf "\nCreate PVC for Jenkins ($JENKINS_PVC_STORAGE_CLASS_NAME):\n"
-    awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
+    awk -v old="JENKINS_PVC_STORAGE_CLASS_NAME" -v new="$JENKINS_PVC_STORAGE_CLASS_NAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/templates/kubernetes/global/pvc.yaml > /tmp/pvc.yaml
     kubectl apply -f /tmp/pvc.yaml
     printf "Done.\n"
 
-    printf "\nCreate Dockerhub secret in kubernetes namespace for Jenkins:\n"
-    kubectl create secret docker-registry dockerhubregkey --docker-server=https://index.docker.io/v2/ --docker-username=$DOCKERHUB_USERNAME --docker-password=$DOCKERHUB_PASSWORD --docker-email=$DOCKERHUB_EMAIL --namespace jenkins
+    printf "\nCreate Dockerhub secret: jenkinsdockerhubregkey in kubernetes namespace: jenkins...\n"
+    kubectl create secret docker-registry jenkinsdockerhubregkey --docker-server=https://index.docker.io/v2/ --docker-username=$DOCKERHUB_USERNAME --docker-password=$DOCKERHUB_PASSWORD --docker-email=$DOCKERHUB_EMAIL --namespace jenkins
     printf "Done.\n"
 
     printf "\nCreate Service Account with Dockerhub secret name in kubernetes namespace for Jenkins:\n"
-    kubectl -n jenkins apply -f ~/kubernetes/jenkins/service-account.yaml
+    kubectl -n jenkins apply -f ~/templates/kubernetes/jenkins/service-account.yaml
     printf "Done.\n"
 
     printf "\nCreate RBAC for Jenkins:\n"
-    kubectl -n jenkins apply -f ~/kubernetes/jenkins/rbac.yaml
+    kubectl -n jenkins apply -f ~/templates/kubernetes/jenkins/rbac.yaml
     printf "Done.\n"
 
     printf "\nVerify get sa and get secret:\n"
@@ -136,7 +203,7 @@ then
     printf "Done.\n"
 
     printf "\nDeploy Jenkins:\n"
-    kubectl apply -f ~/kubernetes/jenkins/deployment.yaml
+    kubectl apply -f ~/templates/kubernetes/jenkins/deployment.yaml
     printf "Done.\n"
 
     sleep 3
@@ -146,7 +213,8 @@ then
     printf "Done.\n"
 
     printf "\nWait max 2m for pods to be running:\n"
-    count=1
+    local count=1
+    local podstatus=''
     while true; do
         sleep 10
         podstatus=$(kubectl get pods -n jenkins | grep jenkins- | awk '{print $3}')
@@ -170,12 +238,13 @@ then
 
 
     printf "\nExpose Jenkins through k8s service\n"
-    kubectl apply -f ~/kubernetes/jenkins/service.yaml
+    kubectl apply -f ~/templates/kubernetes/jenkins/service.yaml
     printf "Done.\n"
 
     printf "\nWait max 2m for svc to have external endpoint:\n"
     count=1
-    unset issvcsuccessful
+    local issvcsuccessful=''
+    local svcstatus=''
     while true; do
         sleep 20
         svcstatus=$(kubectl get svc -n jenkins | grep jenkins | awk '{print $4}')
@@ -203,9 +272,9 @@ then
         printf "\nExtended delay experienced brining service type load balancer online - waiting deadline expired."
         printf "\nYou can take below steps from here:"
         echo -e "\t1. Troubleshoot integrated network service or check some time later if the network is able to assign external ip to jenkins service."
-        echo -e "\t2. delete the service kubectl delete -f ~/kubernetes/jenkins/service.yaml"
-        echo -e "\t3. re-creare the service kubectl apply -f ~/kubernetes/jenkins/service.yaml"
-        echo -e "\t4. Run ~/binaries/jenkinsk8ssetup.sh to complete the configuration of jenkins for running on k8s."
+        echo -e "\t2. delete the service kubectl delete -f ~/templates/kubernetes/jenkins/service.yaml"
+        echo -e "\t3. re-creare the service kubectl apply -f ~/templates/kubernetes/jenkins/service.yaml"
+        echo -e "\t4. Run ~/binaries/wizards/jenkinsk8ssetup.sh to complete the configuration of jenkins for running on k8s."
     fi
 
     if [[ $issvcsuccessful == 'y' ]]
@@ -226,51 +295,46 @@ then
         done;
         jenkinsurl=$(echo "http://$JENKINS_ENDPOINT")
         printf "\n\n\nYou can now access jenkins by browsing $jenkinsurl"
-        printf "\nJENKINS_ENDPOINT=$jenkinsurl" >> /root/.env
-        printf "\nJENKINS_USERNAME=admin" >> /root/.env
+        printf "\nJENKINS_ENDPOINT=$jenkinsurl" >> $HOME/.env
+        printf "\nJENKINS_USERNAME=admin" >> $HOME/.env
     else
-        printf "\nJENKINS_USERNAME=" >> /root/.env
+        printf "\nJENKINS_USERNAME=" >> $HOME/.env
     fi
 
-    jenkinspodname=$(kubectl get pods -n jenkins | grep jenkins- | awk '{print $1}')
-    temporarypassword=$(kubectl logs $jenkinspodname -n jenkins | awk '/Please use the following password to proceed to installation/{x=NR+2}(NR == x){print}')
+    local jenkinspodname=$(kubectl get pods -n jenkins | grep jenkins- | awk '{print $1}')
+    local temporarypassword=$(kubectl logs $jenkinspodname -n jenkins | awk '/Please use the following password to proceed to installation/{x=NR+2}(NR == x){print}')
     printf "\nFirst attempt login password is: $temporarypassword"
-    printf "\nJENKINS_PASSWORD=$temporarypassword" >> /root/.env
+    printf "\nJENKINS_PASSWORD=$temporarypassword" >> $HOME/.env
     printf "\n"
 
     printf "\nMarking as complete."
-    sed -i '/COMPLETE/d' /root/.env
-    printf "\nCOMPLETE=YES" >> /root/.env
+    sed -i '/COMPLETE/d' $HOME/.env
+    printf "\nCOMPLETE=YES" >> $HOME/.env
 
     printf "\n\n"
     printf "*Jenkins deployment complete.*\n\n\n"
 
-    unset confirmed
+    confirmation=''
     if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
     then
         while true; do
             read -p "Confirm to config jenkins configs for k8s [y/n] " yn
             case $yn in
-                [Yy]* ) confirmed='y'; printf "\nyou confirmed yes\n"; break;;
-                [Nn]* ) printf "\n\nYou said no. \n\nReturning...\n\n"; break;;
-                * ) echo "Please answer yes or no.";;
+                [Yy]* ) confirmation='y'; printf "\nyou confirmed yes\n"; break;;
+                [Nn]* ) confirmation='n'; printf "\nYou confirmed no.\n"; break;;
+                * ) echo "Please answer y or n.";;
             esac
         done
     else
-        confirmed='y'
+        confirmation='y'
     fi
 
 
-    if [[ $confirmed == 'y' ]]
+    if [[ $confirmation == 'y' ]]
     then
-        source ~/binaries/jenkinsk8ssetup.sh
+        source ~/binaries/wizards/jenkinsk8ssetup.sh
     else
-        printf "\n\nUse ~/binaries/jenkinsk8ssetup.sh wizard to complete configs for k8s (RECOMMENDED)."
+        printf "\n\nUse ~/binaries/wizards/jenkinsk8ssetup.sh wizard to complete configs for k8s (RECOMMENDED)."
         printf "\nOR\nFollow the instructions further to configure Jenkins for k8s in DETAILS.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
     fi
-    
-    
-else
-    printf "\n\n\nJenkins deployment is already marked as complete. (If this is not desired please change COMPLETE=\"\" or remove COMPLETE in the .env for new jenkins installation)\n"
-    printf "\n\n\nGoing straight to shell access.\n"
-fi
+}
