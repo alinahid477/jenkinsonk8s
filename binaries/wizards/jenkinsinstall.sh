@@ -318,7 +318,7 @@ function installJenkins () {
     if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
     then
         while true; do
-            read -p "Confirm to config jenkins configs for k8s [y/n] " yn
+            read -p "Would you like to configure jenkins for K8s now [y/n] " yn
             case $yn in
                 [Yy]* ) confirmation='y'; printf "\nyou confirmed yes\n"; break;;
                 [Nn]* ) confirmation='n'; printf "\nYou confirmed no.\n"; break;;
@@ -332,7 +332,7 @@ function installJenkins () {
 
     if [[ $confirmation == 'y' ]]
     then
-        source ~/binaries/wizards/jenkinsk8ssetup.sh
+        printf "run the below command:\nmerlin --configure-jenkins\n\n"
     else
         printf "\n\nUse ~/binaries/wizards/jenkinsk8ssetup.sh wizard to complete configs for k8s (RECOMMENDED)."
         printf "\nOR\nFollow the instructions further to configure Jenkins for k8s in DETAILS.md follow from here: STEP 5: CONFIGURE JENKINS\n\n\n"
