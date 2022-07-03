@@ -42,7 +42,8 @@ Local machine with docker-ce or docker-ee installed on it.
 - TKG_VSPHERE_USERNAME={(Optional) username for accessing the cluster. *Leave empty or delete this var if you are providing your own kubeconfig file in the .kube directory*}
 - TKG_VSPHERE_PASSWORD={(Optional) password for accessing the cluster. *Leave empty or delete this var if you are providing your own kubeconfig file in the .kube directory*}
 
-***The below fields are NOT needed in interactive mode (wizard). The wizard collect it accordingly. The below values are needed only if you are using this wizard to provision a pipeline in jenkins)***
+
+***The below values are needed for creating pipeline in jenkins BUT the user does not need to provide upfront/now. If these values are not present the wizard collect it accordingly.***
 - JENKINS_USERNAME=
 - JENKINS_PASSWORD=
 - JENKINS_SECRET_PVT_REPO_USERNAME=
@@ -85,8 +86,8 @@ chmod +x start.sh
 ```
 start.bat
 ```
-- ***Optionally use a 2nd parameter to supply a name for the image and container (eg: `start.sh jenkinsonk8s`). Default name is `jenkinsonk8s` if you do not supply 2nd parameter.***
-- ***Optionally use a 3rd parameter `forcebuild` to force docker build (eg: `start.sh forecebuild or start.sh jenkinsonk8s forecebuild`). Otherwise if the image exists it will ignore building.***
+- *Optionally use a 2nd parameter to supply a name for the image and container (eg: `start.sh jenkinsonk8s`). Default name is `jenkinsonk8s` if you do not supply 2nd parameter.*
+- *Optionally use a 3rd parameter `forcebuild` to force docker build (eg: `start.sh forecebuild or start.sh jenkinsonk8s forecebuild`). Otherwise if the image exists it will ignore building.*
 
 # That's it
 
