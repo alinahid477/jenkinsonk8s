@@ -602,23 +602,29 @@ function configureJenkins () {
                 printf "\nHow would you like to build your container using this sample pipeline?"
                 printf "\nType tbs for building using tanzu build service"
                 printf "\nOR"
+                printf "\nType kapck for building using buildpack.io"
+                printf "\nOR"
                 printf "\nType docker for building using docker build"
                 printf "\n\n"
                 while true; do
-                    read -p "please type one choice ? [tbs/docker] " inp
+                    read -p "please type one choice ? [tbs/kpack/docker] " inp
                     if [[ $inp == "tbs" ]]
                     then
                         containerbuildertype=$inp
                         break;
                     fi
-                    
+                    if [[ $inp == "kapck" ]]
+                    then
+                        containerbuildertype=$inp
+                        break;
+                    fi
                     if [[ $inp == "docker" ]]
                     then
                         containerbuildertype=$inp
                         break;
                     fi
                     
-                    if [[ $containerbuildertype != "tbs" &&  $containerbuildertype != "docker" ]]
+                    if [[ $containerbuildertype != "tbs" && $containerbuildertype != "kpack" && $containerbuildertype != "docker" ]]
                     then
                         printf "\nError: You must provide a valid value\n"
                     fi
@@ -660,7 +666,7 @@ function createJenkinsPipeline () {
 
     
     local containerbuildertype=$1 #(REQUIRED)
-    if [[ $containerbuildertype != "tbs" &&  $containerbuildertype != "docker" ]]
+    if [[ $containerbuildertype != "tbs" && $containerbuildertype != "kpack" && $containerbuildertype != "docker" ]]
     then
         printf "\nError: Received value for ContainerBuilderType:$containerbuildertype.\nError: You must provide a valid value\n"
     fi
@@ -671,7 +677,7 @@ function createJenkinsPipeline () {
     sleep 3
     if [[ -z $JENKINS_ENDPOINT || -z $containerbuildertype ]]
     then
-        printf "\nError: No Jenkins endpoint in .env or ContainerBuilderType(tbs, docker etc) parameter not supplied."
+        printf "\nError: No Jenkins endpoint in .env or ContainerBuilderType(tbs/kapack/docker etc) parameter not supplied."
         printf "\nQuiting..."
         returnOrexit || return 1
     else

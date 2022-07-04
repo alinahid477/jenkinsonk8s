@@ -165,9 +165,9 @@ function installJenkins () {
     then
         if [[ -z $jenkinspsp ]]
         then
-            printf "\ncreating new psp called tbs-psp-privileged using ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
+            printf "\ncreating new psp called jenkins-psp-privileged using ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml\n"
             jenkinspsp=jenkins-psp-privileged
-            kubectl apply -f ~/binaries/templates/kubernetes/global/tbs-psp.priviledged.yaml
+            kubectl apply -f ~/binaries/templates/kubernetes/global/jenkins-psp.priviledged.yaml
             sleep 2
         fi
     fi

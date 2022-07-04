@@ -14,7 +14,7 @@ function helpFunction()
     echo -e "\t-i | --install-jenkins no paramater needed. Signals the wizard to start the process for installing Jenkins on the K8s cluster."
     echo -e "\t-r | --remove-jenkins no paramater needed. Signals the wizard to start the process for deleting jenkins from the K8s cluster."
     echo -e "\t-c | --configure-jenkins no paramater needed. Signals the wizard to start setting up jenkins on the K8s cluster."
-    echo -e "\t-p | --create-pipeline requires type of the pipeline as parameter (supported values: docker, tbs). Signals the wizard to create jenkins pipeline of the type."
+    echo -e "\t-p | --create-pipeline requires type of the pipeline as parameter (supported values: docker/kpack/tbs). Signals the wizard to create jenkins pipeline of the type."
     echo -e "\t-h | --help"
     printf "\n"
 }
@@ -70,7 +70,7 @@ function executeCommand()
         unset jenkinsCreatePipeline
         returnOrexit || return 1
     else
-        printf "\nYou must pass type of the pipeline (supported values: tbs, docker) as parameter.\n"
+        printf "\nYou must pass type of the pipeline (supported values: tbs, kpack, docker) as parameter.\n"
         unset jenkinsCreatePipeline
         returnOrexit || return 1
     fi

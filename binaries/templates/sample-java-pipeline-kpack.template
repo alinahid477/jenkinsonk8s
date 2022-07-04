@@ -1,0 +1,89 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@2.41">
+  <actions/>
+  <description></description>
+  <keepDependencies>false</keepDependencies>
+  <properties/>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@2.93">
+    <script>podTemplate( //idleMinutes: 30, 
+    yaml: &apos;&apos;&apos;
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: jenkins
+spec:
+  volumes:
+    - name: m2
+      persistentVolumeClaim:
+        claimName: jenkins-pvc1
+  serviceAccountName: jenkins-sa
+  containers:
+  - name: maven
+    image: maven:latest
+    command:
+    - cat
+    tty: true
+    volumeMounts:
+    - mountPath: &quot;/root/.m2&quot;
+      name: m2
+  - name: kpack
+    image: kpack/kp
+    command:
+    - cat
+    tty: true
+&apos;&apos;&apos;) {
+    node(POD_LABEL) {
+        def scmVars
+
+        stage(&quot;GIT&quot;) {
+          scmVars=git credentialsId: &apos;pvt-repo-cred&apos;, branch: &apos;main&apos;, url: &apos;https://github.com/alinahid477/vmw-calculator-addservice.git&apos;
+        }
+        
+        stage(&quot;CI-TEST&quot;) {
+          container(&apos;maven&apos;) {
+              sh &quot;&quot;&quot;
+                  mvn test
+              &quot;&quot;&quot;
+          }
+        }
+        
+
+
+        stage(&quot;CD-KPACK&quot;) {
+          container(&apos;kpack&apos;) {
+            withKubeConfig([credentialsId: &apos;jenkins-robot&apos;,
+                        serverUrl: &apos;K8S_CLUSTER_URL&apos;,
+                        clusterName: &apos;K8S_CLUSTER_NAME&apos;,
+                        namespace: &apos;default&apos;
+                        ]) {
+              sh &quot;&quot;&quot;
+                kp image save vmw-calculator-addservice-build --git https://github.com/alinahid477/vmw-calculator-addservice.git --git-revision ${scmVars.GIT_COMMIT} --tag PVT_REGISTRY_URL/calcaddservice --builder default-builder --wait
+              &quot;&quot;&quot;
+            }
+          }
+          
+        }
+        
+        stage(&quot;CD-DEPLOY&quot;) {
+          withKubeConfig([credentialsId: &apos;jenkins-robot&apos;,
+                      serverUrl: &apos;K8S_CLUSTER_URL&apos;,
+                      clusterName: &apos;K8S_CLUSTER_NAME&apos;,
+                      namespace: &apos;default&apos;
+                      ]) {
+            sh &apos;curl -LO &quot;https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl&quot;&apos;
+            sh &apos;chmod 777 ./kubectl&apos;
+            sh &apos;echo THIS DEPLOYMENT IS SAMPLE PURPOSE ONLY and WILL FAIL... MODIFY DEPLOYMENT YAML FILE FOR CORRECT DEPLOYMENT...&apos;
+            sh &apos;./kubectl apply -f kubernetes/deployment.samplepipeline.azure.yaml&apos;
+            // sh &apos;./kubectl patch deployment addservice-deploy -p \&quot;{\\&quot;spec\\&quot;: {\\&quot;template\\&quot;: {\\&quot;metadata\\&quot;: { \\&quot;labels\\&quot;: {  \\&quot;redeploy\\&quot;: \\&quot;$(date +%s)\\&quot;}}}}}\&quot; -n default&apos;
+          }
+        }
+                  
+        
+    }
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>
