@@ -83,7 +83,7 @@ function executeCommand()
 output=""
 
 # read the options
-TEMP=`getopt -o pircf:h --long install-jenkins,create-pipeline,remove-jenkins,configure-jenkins,file:,help -n $0 -- "$@"`
+TEMP=`getopt -o p:ircf:h --long install-jenkins,create-pipeline:,remove-jenkins,configure-jenkins,file:,help -n $0 -- "$@"`
 eval set -- "$TEMP"
 # echo $TEMP;
 while true ; do
