@@ -14,6 +14,7 @@ function helpFunction()
     echo -e "\t-i | --install-jenkins no paramater needed. Signals the wizard to start the process for installing Jenkins on the K8s cluster."
     echo -e "\t-r | --remove-jenkins no paramater needed. Signals the wizard to start the process for deleting jenkins from the K8s cluster."
     echo -e "\t-c | --configure-jenkins no paramater needed. Signals the wizard to start setting up jenkins on the K8s cluster."
+    echo -e "\t-p | --create-pipeline no paramater needed. Signals the wizard to create jenkins pipeline."
     echo -e "\t-h | --help"
     printf "\n"
 }
@@ -22,6 +23,7 @@ function helpFunction()
 unset jenkinsInstall
 unset jenkinsRemove
 unset jenkinsConfigure
+unset jenkinsCreatePipeline
 unset ishelp
 
 function doCheckK8sOnlyOnce()
@@ -62,6 +64,13 @@ function executeCommand()
         returnOrexit || return 1
     fi
 
+    if [[ $jenkinsCreatePipeline == 'y' ]]
+    then
+        unset jenkinsCreatePipeline
+        createJenkinsPipeline    
+        returnOrexit || return 1
+    fi
+
     printf "\nThis shouldn't have happened. Embarrasing.\n"
 }
 
@@ -70,7 +79,7 @@ function executeCommand()
 output=""
 
 # read the options
-TEMP=`getopt -o ircf:h --long install-jenkins,remove-jenkins,configure-jenkins,file:,help -n $0 -- "$@"`
+TEMP=`getopt -o pircf:h --long install-jenkins,create-pipeline,remove-jenkins,configure-jenkins,file:,help -n $0 -- "$@"`
 eval set -- "$TEMP"
 # echo $TEMP;
 while true ; do
@@ -90,6 +99,11 @@ while true ; do
             case "$2" in
                 "" ) jenkinsConfigure='y'; shift 2 ;;
                 * ) jenkinsConfigure='y' ; shift 1 ;;
+            esac ;;
+        -p | --create-pipeline )
+            case "$2" in
+                "" ) jenkinsCreatePipeline='y'; shift 2 ;;
+                * ) jenkinsCreatePipeline='y' ; shift 1 ;;
             esac ;;
         -f | --file )
             case "$2" in

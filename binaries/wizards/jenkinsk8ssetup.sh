@@ -334,7 +334,7 @@ function configureJenkins () {
     count=1
     local statusreceived=''
     while [[ $statusreceived != @(200|403) && $count -lt 12 ]]; do 
-        local statusreceived=$(curl -s -o /dev/null -L -w ''%{http_code}'' $jenkinsurl/login?from=%2F)
+        statusreceived=$(curl -s -o /dev/null -L -w ''%{http_code}'' $jenkinsurl/login?from=%2F)
         echo "received status: $statusreceived."
         if [[ $statusreceived != @(200|403) ]]
         then
@@ -496,6 +496,23 @@ function configureJenkins () {
         printf "\nSafe restart and wait 2min\n"
         java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD safe-restart
         sleep 2m
+        
+        count=1
+        statusreceived=''
+        while [[ $statusreceived != @(200|403) && $count -lt 12 ]]; do 
+            statusreceived=$(curl -s -o /dev/null -L -w ''%{http_code}'' $jenkinsurl/login?from=%2F)
+            echo "received status: $statusreceived."
+            if [[ $statusreceived != @(200|403) ]]
+            then
+                echo "Try# $count of max 12: Retrying in 1min..."
+                sleep 1m
+            else
+                break
+            fi
+            ((count=count+1))
+        done;
+
+
         printf "Done.\n"
         sed -i '/JENKINS_PLUGINS_INSTALLED/d' $HOME/.env
         printf "\nJENKINS_PLUGINS_INSTALLED=y" >> $HOME/.env
@@ -525,7 +542,7 @@ function configureJenkins () {
         sed -i 's/CREDENTIAL_DESCRIPTION/pvt-repo-cred/g' ~/kubernetes/jenkins/pvt-repo.credential.xml
         awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REPO_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/pvt-repo.credential.xml > /tmp/pvt-repo.credential.xml
         awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REPO_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/pvt-repo.credential.xml > ~/kubernetes/jenkins/pvt-repo.credential.xml
-
+        sleep 2
         java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/pvt-repo.credential.xml
         sleep 2
         printf "Done.\n"
@@ -537,7 +554,7 @@ function configureJenkins () {
         sed -i 's/CREDENTIAL_DESCRIPTION/pvt-registry-cred/g' ~/kubernetes/jenkins/pvt-registry.credential.xml
         awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_PVT_REGISTRY_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/pvt-registry.credential.xml > /tmp/pvt-registry.credential.xml
         awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_PVT_REGISTRY_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/pvt-registry.credential.xml > ~/kubernetes/jenkins/pvt-registry.credential.xml
-
+        sleep 2
         java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/pvt-registry.credential.xml
         sleep 2
         printf "Done.\n"
@@ -549,7 +566,7 @@ function configureJenkins () {
         sed -i 's/CREDENTIAL_DESCRIPTION/dockerhub-cred/g' ~/kubernetes/jenkins/dockerhub.credential.xml
         awk -v old="CREDENTIAL_USERNAME" -v new="$JENKINS_SECRET_DOCKERHUB_USERNAME" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/kubernetes/jenkins/dockerhub.credential.xml > /tmp/dockerhub.credential.xml
         awk -v old="CREDENTIAL_PASSWORD" -v new="$JENKINS_SECRET_DOCKERHUB_PASSWORD" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/dockerhub.credential.xml > ~/kubernetes/jenkins/dockerhub.credential.xml
-
+        sleep 2
         java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/dockerhub.credential.xml
         sleep 2
         printf "Done.\n"
@@ -578,18 +595,8 @@ function configureJenkins () {
             confirmation='y'
         fi
 
-        local containerbuildertype=''
-        local clustername=''
-        local clusterurl=''
-        local jenkinsrobottoken=''
         if [[ $confirmation == 'y' ]]
         then
-            printf "\nsetting up cluster for jenkins-robot..\n"
-            clustername=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' | awk -v i=2 -v j=1 'FNR == i {print $j}')
-            clusterurl=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' | awk -v i=2 -v j=2 'FNR == i {print $j}')
-            sleep 2
-            jenkinsrobottoken=$(~/binaries/wizards/jenkins-robot-token-generator.sh --name jenkins-robot --namespace default | grep JENKINS_ROBOT_SA_TOKEN | awk -F= '{print $2}')
-
             if [[ -z $SILENTMODE || $SILENTMODE == 'n' ]]
             then 
                 printf "\nHow would you like to build your container using this sample pipeline?"
@@ -623,33 +630,15 @@ function configureJenkins () {
                     containerbuildertype='tbs'
                 fi
             fi
-
-            printf "\ncreating credential for jenkins-robot..\n"
-            cp ~/binaries/templates/credential.secret-text.template /tmp/jenkins-robot.credential.xml
-            sed -i 's/CREDENTIAL_ID/jenkins-robot/g' /tmp/jenkins-robot.credential.xml
-            awk -v old="CREDENTIAL_PASSWORD" -v new="$jenkinsrobottoken" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/jenkins-robot.credential.xml > ~/kubernetes/jenkins/jenkins-robot.credential.xml
-            sleep 1
-            java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/jenkins-robot.credential.xml
-            sleep 2
-            printf "Done.\n"
-            
-            local pipelinefilename=sample-java-pipeline-$containerbuildertype
-            if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
+            createJenkinsPipeline $containerbuildertype
+            ret=$? # 0 means checkCondition was true else 1 meaning check condition is false
+            if [[ $ret == 0 ]]
             then
-                pipelinefilename=sample-java-pipeline-sscert-$containerbuildertype
+                sed -i '/JENKINS_SAMPLE_PIPELINE_APPLIED/d' $HOME/.env
+                printf "\nJENKINS_SAMPLE_PIPELINE_APPLIED=y" >> $HOME/.env
             fi
-            awk -v old="K8S_CLUSTER_URL" -v new="$clusterurl" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/$pipelinefilename.template > /tmp/$pipelinefilename.template
-            awk -v old="K8S_CLUSTER_NAME" -v new="$clustername" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.template > /tmp/$pipelinefilename.xml
-            awk -v old="PVT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.xml > ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
-            sleep 1
-            printf "\ncreating pipeline...\n"
-
-            java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-job sample-java-$containerbuildertype < ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
-            sleep 2
-            printf "Done.\n"
-        fi    
-        sed -i '/JENKINS_SAMPLE_PIPELINE_APPLIED/d' $HOME/.env
-        printf "\nJENKINS_SAMPLE_PIPELINE_APPLIED=y" >> $HOME/.env
+        fi      
+        
     else
         printf "\nJENKINS_SAMPLE_PIPELINE_APPLIED is not marked as complete. No sample pipeline will be created. \n"
     fi
@@ -667,3 +656,64 @@ function configureJenkins () {
 
 }
 
+function createJenkinsPipeline () {
+
+    printf "\n\nCreating pipeline in Jenkins...\n\n"
+    local containerbuildertype=$1 #(REQUIRED)
+    local jenkinsurl=''
+    export $(cat $HOME/.env | xargs)
+    sleep 3
+    if [[ -z $JENKINS_ENDPOINT || -z $containerbuildertype ]]
+    then
+        printf "\nError: No Jenkins endpoint in .env or ContainerBuilderType(tbs, docker etc) parameter not supplied."
+        printf "\nQuiting..."
+        returnOrexit || return 1
+    else
+        if [[ $JENKINS_ENDPOINT == *"http"* ]]
+        then
+            jenkinsurl=$(echo "$JENKINS_ENDPOINT")
+        else
+            jenkinsurl=$(echo "http://$JENKINS_ENDPOINT")
+        fi
+        printf "\nJenkins URL: $jenkinsurl\n"
+    fi
+
+    local containerbuildertype=''
+    local clustername=''
+    local clusterurl=''
+    local jenkinsrobottoken=''
+    
+    printf "\nsetting up cluster for jenkins-robot..\n"
+    clustername=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' | awk -v i=2 -v j=1 'FNR == i {print $j}')
+    clusterurl=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' | awk -v i=2 -v j=2 'FNR == i {print $j}')
+    sleep 2
+    jenkinsrobottoken=$(~/binaries/wizards/jenkins-robot-token-generator.sh --name jenkins-robot --namespace default | grep JENKINS_ROBOT_SA_TOKEN | awk -F= '{print $2}')
+
+    printf "\ncreating credential for jenkins-robot..\n"
+    cp ~/binaries/templates/credential.secret-text.template /tmp/jenkins-robot.credential.xml
+    sed -i 's/CREDENTIAL_ID/jenkins-robot/g' /tmp/jenkins-robot.credential.xml
+    awk -v old="CREDENTIAL_PASSWORD" -v new="$jenkinsrobottoken" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/jenkins-robot.credential.xml > ~/kubernetes/jenkins/jenkins-robot.credential.xml
+    sleep 1
+    java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-credentials-by-xml system::system::jenkins _  < ~/kubernetes/jenkins/jenkins-robot.credential.xml
+    sleep 2
+    printf "Done.\n"
+    
+    local pipelinefilename=sample-java-pipeline-$containerbuildertype
+    if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
+    then
+        pipelinefilename=sample-java-pipeline-sscert-$containerbuildertype
+    fi
+    awk -v old="K8S_CLUSTER_URL" -v new="$clusterurl" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/$pipelinefilename.template > /tmp/$pipelinefilename.template
+    awk -v old="K8S_CLUSTER_NAME" -v new="$clustername" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.template > /tmp/$pipelinefilename.xml
+    awk -v old="PVT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.xml > ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
+    sleep 1
+    printf "\ncreating pipeline...\n"
+
+    java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-job sample-java-$containerbuildertype < ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
+    sleep 2
+    printf "Done.\n"
+
+    printf "\nPipeline creation...DONE\n\n"
+
+    return 0
+}
