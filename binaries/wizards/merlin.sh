@@ -64,9 +64,13 @@ function executeCommand()
         returnOrexit || return 1
     fi
 
-    if [[ $jenkinsCreatePipeline == 'y' ]]
+    if [[ -n $jenkinsCreatePipeline && $jenkinsCreatePipeline != 'X' ]]
     then
         createJenkinsPipeline $jenkinsCreatePipeline
+        unset jenkinsCreatePipeline
+        returnOrexit || return 1
+    else
+        printf "\nYou must pass type of the pipeline (supported values: tbs, docker) as parameter.\n"
         unset jenkinsCreatePipeline
         returnOrexit || return 1
     fi
@@ -102,7 +106,7 @@ while true ; do
             esac ;;
         -p | --create-pipeline )
             case "$2" in
-                "" ) jenkinsCreatePipeline=''; shift 2 ;;
+                "" ) jenkinsCreatePipeline='X'; shift 2 ;;
                 * ) jenkinsCreatePipeline=$2 ; shift 2 ;;
             esac ;;
         -f | --file )
