@@ -658,12 +658,14 @@ function configureJenkins () {
 
 function createJenkinsPipeline () {
 
-    printf "\n\nCreating pipeline in Jenkins...\n\n"
+    
     local containerbuildertype=$1 #(REQUIRED)
     if [[ $containerbuildertype != "tbs" &&  $containerbuildertype != "docker" ]]
     then
         printf "\nError: Received value for ContainerBuilderType:$containerbuildertype.\nError: You must provide a valid value\n"
     fi
+    printf "\n\nCreating pipeline ($containerbuildertype) in Jenkins...\n\n"
+    sleep 3
     local jenkinsurl=''
     export $(cat $HOME/.env | xargs)
     sleep 3
@@ -682,17 +684,18 @@ function createJenkinsPipeline () {
         printf "\nJenkins URL: $jenkinsurl\n"
     fi
 
-    local containerbuildertype=''
     local clustername=''
     local clusterurl=''
     local jenkinsrobottoken=''
     
+    
+    #isexists=$(java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD list-credentials system::system::jenkins | grep -w jenkins-robot)
+
     printf "\nsetting up cluster for jenkins-robot..\n"
     clustername=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' | awk -v i=2 -v j=1 'FNR == i {print $j}')
     clusterurl=$(kubectl config view -o jsonpath='{"Cluster name\tServer\n"}{range .clusters[*]}{.name}{"\t"}{.cluster.server}{"\n"}{end}' | awk -v i=2 -v j=2 'FNR == i {print $j}')
     sleep 2
     jenkinsrobottoken=$(~/binaries/wizards/jenkins-robot-token-generator.sh --name jenkins-robot --namespace default | grep JENKINS_ROBOT_SA_TOKEN | awk -F= '{print $2}')
-
     printf "\ncreating credential for jenkins-robot..\n"
     cp ~/binaries/templates/credential.secret-text.template /tmp/jenkins-robot.credential.xml
     sed -i 's/CREDENTIAL_ID/jenkins-robot/g' /tmp/jenkins-robot.credential.xml
@@ -702,22 +705,32 @@ function createJenkinsPipeline () {
     sleep 2
     printf "Done.\n"
     
+       
     local pipelinefilename=sample-java-pipeline-$containerbuildertype
     if [[ $JENKINS_SECRET_PVT_REGISTRY_ON_SELF_SIGNED_CERT == 'y' ]]
     then
         pipelinefilename=sample-java-pipeline-sscert-$containerbuildertype
     fi
-    awk -v old="K8S_CLUSTER_URL" -v new="$clusterurl" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/$pipelinefilename.template > /tmp/$pipelinefilename.template
-    awk -v old="K8S_CLUSTER_NAME" -v new="$clustername" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.template > /tmp/$pipelinefilename.xml
-    awk -v old="PVT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.xml > ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
-    sleep 1
-    printf "\ncreating pipeline...\n"
+    if [[ -f ~/binaries/templates/$pipelinefilename.template ]]
+    then
+        awk -v old="K8S_CLUSTER_URL" -v new="$clusterurl" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' ~/binaries/templates/$pipelinefilename.template > /tmp/$pipelinefilename.template
+        awk -v old="K8S_CLUSTER_NAME" -v new="$clustername" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.template > /tmp/$pipelinefilename.xml
+        awk -v old="PVT_REGISTRY_URL" -v new="$JENKINS_SECRET_PVT_REGISTRY_URL" 's=index($0,old){$0=substr($0,1,s-1) new substr($0,s+length(old))} 1' /tmp/$pipelinefilename.xml > ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
+        sleep 1
+        printf "\ncreating pipeline...\n"
 
-    java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-job sample-java-$containerbuildertype < ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
-    sleep 2
-    printf "Done.\n"
+        java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-job sample-java-$containerbuildertype < ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
+        sleep 2
+        printf "Done.\n"
 
-    printf "\nPipeline creation...DONE\n\n"
+        printf "\nPipeline creation...DONE\n\n"
+        return 0
+    else
+        printf "\nProvided input for pipeline type: $containerbuildertype...\n"
+        printf "No such template exists: ~/binaries/templates/$pipelinefilename.template\n"
+        printf "\nPipeline creation...DONE\n\n"
+        return 1
+    fi
 
-    return 0
+    return 0    
 }
