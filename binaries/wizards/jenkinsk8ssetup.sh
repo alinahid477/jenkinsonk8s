@@ -660,6 +660,10 @@ function createJenkinsPipeline () {
 
     printf "\n\nCreating pipeline in Jenkins...\n\n"
     local containerbuildertype=$1 #(REQUIRED)
+    if [[ $containerbuildertype != "tbs" &&  $containerbuildertype != "docker" ]]
+    then
+        printf "\nError: Received value for ContainerBuilderType:$containerbuildertype.\nError: You must provide a valid value\n"
+    fi
     local jenkinsurl=''
     export $(cat $HOME/.env | xargs)
     sleep 3

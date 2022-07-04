@@ -14,7 +14,7 @@ function helpFunction()
     echo -e "\t-i | --install-jenkins no paramater needed. Signals the wizard to start the process for installing Jenkins on the K8s cluster."
     echo -e "\t-r | --remove-jenkins no paramater needed. Signals the wizard to start the process for deleting jenkins from the K8s cluster."
     echo -e "\t-c | --configure-jenkins no paramater needed. Signals the wizard to start setting up jenkins on the K8s cluster."
-    echo -e "\t-p | --create-pipeline no paramater needed. Signals the wizard to create jenkins pipeline."
+    echo -e "\t-p | --create-pipeline requires type of the pipeline as parameter (supported values: docker, tbs). Signals the wizard to create jenkins pipeline of the type."
     echo -e "\t-h | --help"
     printf "\n"
 }
@@ -66,8 +66,8 @@ function executeCommand()
 
     if [[ $jenkinsCreatePipeline == 'y' ]]
     then
+        createJenkinsPipeline $jenkinsCreatePipeline
         unset jenkinsCreatePipeline
-        createJenkinsPipeline    
         returnOrexit || return 1
     fi
 
@@ -102,8 +102,8 @@ while true ; do
             esac ;;
         -p | --create-pipeline )
             case "$2" in
-                "" ) jenkinsCreatePipeline='y'; shift 2 ;;
-                * ) jenkinsCreatePipeline='y' ; shift 1 ;;
+                "" ) jenkinsCreatePipeline=''; shift 2 ;;
+                * ) jenkinsCreatePipeline=$2 ; shift 2 ;;
             esac ;;
         -f | --file )
             case "$2" in
