@@ -7,6 +7,9 @@ source $HOME/binaries/wizards/jenkinsinstall.sh
 source $HOME/binaries/wizards/jenkinsdelete.sh
 source $HOME/binaries/wizards/jenkinsk8ssetup.sh
 
+
+export $(cat $HOME/.env | xargs)
+
 function helpFunction()
 {
     printf "\n"
