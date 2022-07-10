@@ -613,7 +613,7 @@ function configureJenkins () {
                         containerbuildertype=$inp
                         break;
                     fi
-                    if [[ $inp == "kapck" ]]
+                    if [[ $inp == "kpack" ]]
                     then
                         containerbuildertype=$inp
                         break;
