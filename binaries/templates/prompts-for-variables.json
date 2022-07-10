@@ -11,12 +11,12 @@
         "input_type": "password"
     },
     {
-        "name": "<JENKINS_SECRET_DOCKERHUB_USERNAME>",
+        "name": "<DOCKERHUB_USERNAME>",
         "hint": "Dockerhub secret (This is required to avoid ratelimiting error from dockerhub).",
         "isRecordAsEnvVar": true
     },
     {
-        "name": "<JENKINS_SECRET_DOCKERHUB_PASSWORD>",
+        "name": "<DOCKERHUB_PASSWORD>",
         "hint": "Dockerhub secret (This is required to avoid ratelimiting error from dockerhub).",
         "use_special_replace": true,
         "input_type":"password",
