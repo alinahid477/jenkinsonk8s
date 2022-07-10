@@ -728,7 +728,24 @@ function createJenkinsPipeline () {
         java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD create-job sample-java-$containerbuildertype < ~/kubernetes/jenkins/$pipelinefilename.nogit.xml
         sleep 2
         printf "Done.\n"
-
+        printf "\nSafe restart and wait 2min\n"
+        java -jar ~/binaries/jenkins-cli.jar -s $jenkinsurl:8080 -auth $JENKINS_USERNAME:$JENKINS_PASSWORD safe-restart
+        sleep 2m
+        
+        count=1
+        statusreceived=''
+        while [[ $statusreceived != @(200|403) && $count -lt 12 ]]; do 
+            statusreceived=$(curl -s -o /dev/null -L -w ''%{http_code}'' $jenkinsurl/login?from=%2F)
+            echo "received status: $statusreceived."
+            if [[ $statusreceived != @(200|403) ]]
+            then
+                echo "Try# $count of max 12: Retrying in 1min..."
+                sleep 1m
+            else
+                break
+            fi
+            ((count=count+1))
+        done;
         printf "\nPipeline creation...DONE\n\n"
         return 0
     else
