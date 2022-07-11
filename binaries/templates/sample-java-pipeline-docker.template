@@ -39,6 +39,11 @@ spec:
     volumeMounts:
     - mountPath: &quot;/root/.m2&quot;
       name: m2
+  - name: generic
+    image: centos:latest
+    command:
+    - cat
+    tty: true
 &apos;&apos;&apos;) {
     node(POD_LABEL) {
         
@@ -74,17 +79,19 @@ spec:
         }
         
         stage(&quot;K8S&quot;) {
-          withKubeConfig([credentialsId: &apos;jenkins-robot&apos;,
-                      serverUrl: &apos;K8S_CLUSTER_URL&apos;,
-                      clusterName: &apos;K8S_CLUSTER_NAME&apos;,
-                      namespace: &apos;default&apos;
-                      ]) {
-            sh &apos;curl -LO &quot;https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl&quot;&apos;
-            sh &apos;chmod 777 ./kubectl&apos;
-            sh &apos;echo THIS DEPLOYMENT IS SAMPLE PURPOSE ONLY and WILL FAIL... MODIFY DEPLOYMENT YAML FILE FOR CORRECT DEPLOYMENT...&apos;
-            sh &apos;./kubectl apply -f kubernetes/deployment.samplepipeline.azure.yaml&apos;
-            // sh &apos;./kubectl patch deployment addservice-deploy -p \&quot;{\\&quot;spec\\&quot;: {\\&quot;template\\&quot;: {\\&quot;metadata\\&quot;: { \\&quot;labels\\&quot;: {  \\&quot;redeploy\\&quot;: \\&quot;$(date +%s)\\&quot;}}}}}\&quot; -n default&apos;
-          }
+          container(&apos;generic&apos;) {
+            withKubeConfig([credentialsId: &apos;jenkins-robot&apos;,
+                        serverUrl: &apos;K8S_CLUSTER_URL&apos;,
+                        clusterName: &apos;K8S_CLUSTER_NAME&apos;,
+                        namespace: &apos;default&apos;
+                        ]) {
+              sh &apos;curl -LO &quot;https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl&quot;&apos;
+              sh &apos;chmod 777 ./kubectl&apos;
+              sh &apos;echo THIS DEPLOYMENT IS SAMPLE PURPOSE ONLY and WILL FAIL... MODIFY DEPLOYMENT YAML FILE FOR CORRECT DEPLOYMENT...&apos;
+              sh &apos;./kubectl apply -f kubernetes/deployment.samplepipeline.azure.yaml&apos;
+              // sh &apos;./kubectl patch deployment addservice-deploy -p \&quot;{\\&quot;spec\\&quot;: {\\&quot;template\\&quot;: {\\&quot;metadata\\&quot;: { \\&quot;labels\\&quot;: {  \\&quot;redeploy\\&quot;: \\&quot;$(date +%s)\\&quot;}}}}}\&quot; -n default&apos;
+            }
+          }          
         }
                   
         
