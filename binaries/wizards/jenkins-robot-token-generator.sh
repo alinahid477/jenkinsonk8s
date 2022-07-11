@@ -74,7 +74,7 @@ kubectl --kubeconfig $kubeconfig -n $namespace create serviceaccount $name
 sleep 4
 
 printf "\nMaking jenkins-robot cluster-admin in namespace $namespace...\n"
-kubectl --kubeconfig $kubeconfig -n $namespace create rolebinding $name-role-binding --clusterrole=cluster-admin --serviceaccount=$namespace:$name
+kubectl --kubeconfig $kubeconfig -n $namespace create clusterrolebinding $name-role-binding --clusterrole=cluster-admin --serviceaccount=$namespace:$name
 sleep 4
 
 serviceaccounttokenname=$(kubectl -n $namespace get serviceaccount $name -o go-template --template='{{range .secrets}}{{.name}}{{"\n"}}{{end}}')
